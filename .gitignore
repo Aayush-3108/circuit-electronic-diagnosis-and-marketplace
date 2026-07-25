@@ -1,0 +1,42 @@
+# ── Secrets / environment ──────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+*.env
+backend/.env
+backend/.env.example
+ml/scripts/.env
+
+# ── Python ─────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+*.egg
+
+# ── Node / frontend ─────────────────────────────────────────────────────────
+node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/.local/
+
+# ── ML artefacts (large model weights) ─────────────────────────────────────
+# Keep the trained .pt files out of git (they're large binary files)
+# Check them in manually if you want versioning, or use Git LFS.
+ml/datasets/
+ml/models/runs/
+
+# ── IDE / OS ────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.suo
+*.sln

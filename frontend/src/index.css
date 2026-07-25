@@ -1,0 +1,296 @@
+/* ── Google Fonts Import: Inter (Sans-Serif) ──────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+/* ── Design System Variables (Premium SaaS Tokens) ────────────────────────── */
+:root {
+  /* Fonts */
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  /* Spacing Scale (Tactile 8px Grid System) */
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --space-6: 48px;
+  --space-8: 64px;
+  --space-12: 96px;
+  --space-16: 128px;
+
+  /* Border Radii (Premium Curved Corners) */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* Theme Palette - Light Mode (warm cream, not cold white) */
+  --bg: #F7F5F0;           /* warm parchment base */
+  --surface: #FEFDF9;      /* off-white card face */
+  --surface-2: #F0EDE6;    /* warm sand-tone inputs */
+  --surface-3: #E5E1D8;    /* slightly deeper dividers */
+  --border: #DDD9CF;       /* warm beige border */
+  --border-subtle: #EAE7E0; /* barely-there separator */
+  --text: #1C1A17;         /* warm near-black for text */
+  --text-muted: #6B6459;   /* warm brownish-gray */
+  --text-dim: #A09890;     /* dim warm gray */
+
+  /* Accent Tones */
+  --accent: #059669;       /* deeper emerald (readable on warm bg) */
+  --accent-dim: rgba(5, 150, 105, 0.08);
+  --accent-warm: #EA580C;  /* richer orange */
+  --accent-warm-dim: rgba(234, 88, 12, 0.07);
+
+  /* Semantic Verdicts */
+  --sell: #1D4ED8;         /* Royal Blue */
+  --sell-dim: rgba(29, 78, 216, 0.07);
+  --repair: #B45309;       /* Warm Amber */
+  --repair-dim: rgba(180, 83, 9, 0.07);
+  --recycle: #B91C1C;      /* Crimson Red */
+  --recycle-dim: rgba(185, 28, 28, 0.07);
+  --upgrade: #6D28D9;      /* Deep Violet */
+  --upgrade-dim: rgba(109, 40, 217, 0.07);
+
+  /* Layered Drop Shadows (warm tinted shadows) */
+  --shadow-card: 0 1px 4px 0 rgba(100, 80, 40, 0.08), 0 1px 2px 0 rgba(100, 80, 40, 0.04);
+  --shadow-modal: 0 20px 25px -5px rgba(80, 60, 20, 0.12), 0 10px 10px -5px rgba(80, 60, 20, 0.06);
+  --shadow-lift: 0 10px 15px -3px rgba(80, 60, 20, 0.08), 0 4px 6px -2px rgba(80, 60, 20, 0.04);
+}
+
+[data-theme="dark"] {
+  /* Theme Palette - Dark Mode */
+  --bg: #09090B;
+  --surface: #18181B;
+  --surface-2: #27272A;
+  --surface-3: #3F3F46;
+  --border: #27272A;
+  --border-subtle: #18181B;
+  --text: #FAFAFA;
+  --text-muted: #A1A1AA;
+  --text-dim: #71717A;
+
+  /* Accent Tones */
+  --accent-dim: rgba(16, 185, 129, 0.1);
+  --accent-warm-dim: rgba(249, 115, 22, 0.1);
+
+  /* Semantic Verdicts */
+  --sell: #60A5FA;
+  --sell-dim: rgba(96, 165, 250, 0.1);
+  --repair: #FBBF24;
+  --repair-dim: rgba(251, 191, 36, 0.1);
+  --recycle: #F87171;
+  --recycle-dim: rgba(248, 113, 113, 0.1);
+  --upgrade: #A78BFA;
+  --upgrade-dim: rgba(167, 139, 250, 0.1);
+
+  --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+  --shadow-modal: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  --shadow-lift: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+}
+
+/* ── Tailwind Bindings ──────────────────────────────────────────────────── */
+@theme inline {
+  --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
+  --font-mono: var(--font-mono);
+
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-dim: var(--text-dim);
+  --color-accent: var(--accent);
+  --color-accent-warm: var(--accent-warm);
+  --color-sell: var(--sell);
+  --color-repair: var(--repair);
+  --color-recycle: var(--recycle);
+  --color-upgrade: var(--upgrade);
+}
+
+/* ── Base Reset ─────────────────────────────────────────────────────────── */
+@layer base {
+  *, *::before, *::after {
+    border-color: var(--border);
+    box-sizing: border-box;
+  }
+  html {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+    scroll-behavior: smooth;
+  }
+  body {
+    min-height: 100vh;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.2;
+    color: var(--text);
+  }
+  ::selection {
+    background: var(--accent);
+    color: #FFFFFF;
+  }
+}
+
+/* ── SaaS Elements Layout ────────────────────────────────────────────────── */
+@layer components {
+
+  /* Modern cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s;
+    padding: var(--space-3);
+  }
+
+  .card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lift);
+    border-color: var(--accent-warm);
+  }
+
+  /* Input fields styling */
+  .input-field {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    color: var(--text);
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .input-field:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim);
+  }
+
+  /* Modern buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    border-radius: var(--radius-md);
+    padding: 10px 18px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    background: var(--surface);
+    color: var(--text);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    line-height: 1;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #FFFFFF;
+  }
+  .btn-primary:hover {
+    background: #0d9468;
+    border-color: #0d9468;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+  }
+
+  .btn-warm {
+    background: var(--accent-warm);
+    border-color: var(--accent-warm);
+    color: #FFFFFF;
+  }
+  .btn-warm:hover {
+    background: #ea580c;
+    border-color: #ea580c;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(249, 115, 22, 0.2);
+  }
+
+  .btn-outline {
+    background: var(--surface);
+    border-color: var(--border);
+    color: var(--text-muted);
+  }
+  .btn-outline:hover {
+    border-color: var(--text-muted);
+    color: var(--text);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    border-color: transparent;
+    color: var(--text-muted);
+  }
+  .btn-ghost:hover {
+    background: var(--surface-2);
+    color: var(--text);
+  }
+
+  /* Smooth verdict status chips */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 99px;
+    padding: 4px 12px;
+    border: 1px solid;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .section-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  /* Minimal clean page layouts vertical spaces */
+  .section-spacing {
+    padding-top: var(--space-12);
+    padding-bottom: var(--space-12);
+  }
+
+  /* Decorative radial background glow */
+  .hero-glow {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 1200px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.06) 0%, rgba(16, 185, 129, 0) 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Flat clean box */
+  .terminal-box {
+    background: #09090b;
+    color: #f4f4f5;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    padding: 24px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    overflow-x: auto;
+    box-shadow: var(--shadow-modal);
+  }
+}

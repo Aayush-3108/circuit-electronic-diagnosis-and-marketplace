@@ -1,0 +1,98 @@
+{
+  "recommendation_classifier": {
+    "accuracy": 0.875,
+    "classification_report": {
+      "recycle": {
+        "precision": 0.7731343283582089,
+        "recall": 0.9119718309859155,
+        "f1-score": 0.8368336025848142,
+        "support": 284.0
+      },
+      "repair": {
+        "precision": 0.8551587301587301,
+        "recall": 0.9308855291576674,
+        "f1-score": 0.8914167528438469,
+        "support": 463.0
+      },
+      "sell": {
+        "precision": 0.9403254972875226,
+        "recall": 0.859504132231405,
+        "f1-score": 0.8981001727115717,
+        "support": 605.0
+      },
+      "upgrade": {
+        "precision": 0.9134615384615384,
+        "recall": 0.7661290322580645,
+        "f1-score": 0.8333333333333334,
+        "support": 248.0
+      },
+      "accuracy": 0.875,
+      "macro avg": {
+        "precision": 0.8705200235665,
+        "recall": 0.867122631158263,
+        "f1-score": 0.8649209653683916,
+        "support": 1600.0
+      },
+      "weighted avg": {
+        "precision": 0.8818400179466473,
+        "recall": 0.875,
+        "f1-score": 0.8752524817862225,
+        "support": 1600.0
+      }
+    },
+    "top_features": [
+      [
+        "age_months",
+        0.2251
+      ],
+      [
+        "damage_severity",
+        0.167
+      ],
+      [
+        "battery_health_pct",
+        0.1553
+      ],
+      [
+        "damage_type_none",
+        0.0993
+      ],
+      [
+        "damage_type_screen_crack",
+        0.0698
+      ],
+      [
+        "functional_status_not_functional",
+        0.0611
+      ],
+      [
+        "damage_type_screen_scratch",
+        0.0314
+      ],
+      [
+        "device_type_phone",
+        0.0301
+      ],
+      [
+        "functional_status_fully_functional",
+        0.0287
+      ],
+      [
+        "original_price_inr",
+        0.0277
+      ]
+    ]
+  },
+  "repair_cost_regressor": {
+    "model": "xgboost_repair_cost",
+    "mae_inr": 971.8,
+    "r2_score": 0.9642,
+    "mape_pct": 2023.06
+  },
+  "resale_value_regressor": {
+    "model": "lightgbm_resale_value",
+    "mae_inr": 1962.17,
+    "r2_score": 0.9882,
+    "mape_pct": 7.64
+  }
+}
