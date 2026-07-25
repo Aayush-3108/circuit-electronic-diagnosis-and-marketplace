@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # Circuit — AI-Powered Electronics Marketplace 
 
 Post a photo of a damaged device → get an AI-driven sell / repair / recycle
