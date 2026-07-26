@@ -1,5 +1,5 @@
-<<<<<<< HEAD
-# Circuit — AI-Powered Electronics Marketplace (Capstone, ₹0 budget)
+
+# Circuit — AI-Powered Electronics Marketplace 
 
 Post a photo of a damaged device → get an AI-driven sell / repair / recycle
 recommendation, nearby repair shop suggestions, and an upgrade advisor.
