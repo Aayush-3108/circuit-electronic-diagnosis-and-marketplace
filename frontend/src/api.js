@@ -103,6 +103,17 @@ export async function getListing(id) {
   return handleResponse(res);
 }
 
+export async function getPartMatches({ deviceType, brand, modelName, neededPartCategory }) {
+  const params = new URLSearchParams({
+    device_type: deviceType,
+    brand,
+    model_name: modelName,
+    needed_part_category: neededPartCategory
+  });
+  const res = await fetch(`${API_URL}/api/marketplace/matches?${params}`);
+  return handleResponse(res);
+}
+
 export async function updateListingStatus(id, status, idToken) {
   const res = await fetch(`${API_URL}/api/marketplace/listings/${id}/status`, {
     method: 'PATCH',
@@ -119,6 +130,46 @@ export async function deleteListing(id, idToken) {
   const res = await fetch(`${API_URL}/api/marketplace/listings/${id}`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${idToken}` },
+  });
+  return handleResponse(res);
+}
+
+// --- Messaging -----------------------------------------------------------
+
+export async function createOrGetConversation({ listingId, sellerUid }, idToken) {
+  const res = await fetch(`${API_URL}/api/conversations`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${idToken}`,
+    },
+    body: JSON.stringify({ listing_id: listingId, seller_uid: sellerUid }),
+  });
+  return handleResponse(res);
+}
+
+export async function getConversations(idToken) {
+  const res = await fetch(`${API_URL}/api/conversations`, {
+    headers: { Authorization: `Bearer ${idToken}` },
+  });
+  return handleResponse(res);
+}
+
+export async function getConversationMessages(conversationId, idToken) {
+  const res = await fetch(`${API_URL}/api/conversations/${conversationId}/messages`, {
+    headers: { Authorization: `Bearer ${idToken}` },
+  });
+  return handleResponse(res);
+}
+
+export async function sendConversationMessage(conversationId, text, idToken) {
+  const res = await fetch(`${API_URL}/api/conversations/${conversationId}/messages`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${idToken}`,
+    },
+    body: JSON.stringify({ text }),
   });
   return handleResponse(res);
 }

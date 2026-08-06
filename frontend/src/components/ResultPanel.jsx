@@ -1,7 +1,18 @@
 import { useState, useEffect } from 'react';
 import StatusChip, { STATUS_CONFIG } from './StatusChip';
+import { getPartMatches } from '../api';
 
-export default function ResultPanel({ result, imageFile, onReset, onGoUpgrade, onGoSell, onGoShops }) {
+const DAMAGE_TO_PART_CATEGORY = {
+  screen_crack: 'screen',
+  screen_scratch: 'screen',
+  dead_pixel: 'screen',
+  battery_issue: 'battery',
+  keyboard_damage: 'keyboard',
+  port_damage: 'charging_port',
+  body_damage: 'chassis'
+};
+
+export default function ResultPanel({ result, meta, imageFile, onReset, onGoUpgrade, onGoSell, onGoShops }) {
   const {
     detection,
     recommendation,
@@ -13,6 +24,8 @@ export default function ResultPanel({ result, imageFile, onReset, onGoUpgrade, o
 
   // React state for object URL to handle React 18 strict mode re-mounts cleanly
   const [imgSrc, setImgSrc] = useState(null);
+  const [donorMatches, setDonorMatches] = useState(null);
+  const [loadingMatches, setLoadingMatches] = useState(false);
 
   useEffect(() => {
     if (!imageFile) {
@@ -25,6 +38,24 @@ export default function ResultPanel({ result, imageFile, onReset, onGoUpgrade, o
       URL.revokeObjectURL(url);
     };
   }, [imageFile]);
+
+  useEffect(() => {
+    if (recommendation === 'repair' && meta && detection.damage_type) {
+      const category = DAMAGE_TO_PART_CATEGORY[detection.damage_type];
+      if (category) {
+        setLoadingMatches(true);
+        getPartMatches({
+          deviceType: meta.deviceType,
+          brand: meta.brand,
+          modelName: meta.modelName,
+          neededPartCategory: category
+        })
+          .then(res => setDonorMatches(res.matches))
+          .catch(err => console.error("Failed to fetch matches", err))
+          .finally(() => setLoadingMatches(false));
+      }
+    }
+  }, [recommendation, meta, detection.damage_type]);
 
   const isMock = detection.source === 'mock_fallback';
   const recommendationColor = STATUS_CONFIG[recommendation]?.color || 'var(--accent)';
@@ -145,6 +176,39 @@ export default function ResultPanel({ result, imageFile, onReset, onGoUpgrade, o
           </div>
         </div>
       </div>
+
+      {/* Donor Matches */}
+      {recommendation === 'repair' && (loadingMatches || (donorMatches && donorMatches.length > 0)) && (
+        <div className="card p-6 md:p-8 space-y-4 bg-[var(--surface-2)]">
+          <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1">
+            Compatible Donor Parts Available
+          </p>
+          {loadingMatches ? (
+            <div className="skeleton h-32 w-full rounded-xl" />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {donorMatches.map((m, i) => (
+                <div key={i} className="border border-[var(--border)] bg-[var(--surface)] p-4 rounded-xl flex flex-col gap-3">
+                  {m.image_url ? (
+                    <img src={m.image_url} alt={m.title} className="w-full h-24 object-cover rounded-lg" />
+                  ) : (
+                    <div className="w-full h-24 bg-[var(--surface-2)] rounded-lg flex items-center justify-center text-2xl opacity-50">🛠️</div>
+                  )}
+                  <div>
+                    <h4 className="text-sm font-bold text-[var(--text)] line-clamp-1">{m.title}</h4>
+                    <p className="text-[10px] text-[var(--text-dim)] uppercase">Compatible with: {m.compatible_with}</p>
+                    <p className="text-[10px] text-[var(--text-dim)] uppercase mt-1">Condition: {m.condition}</p>
+                  </div>
+                  <div className="mt-auto flex justify-between items-center pt-2 border-t border-[var(--border-subtle)]">
+                    <span className="font-mono text-sm font-bold text-[var(--sell)]">₹{m.price.toLocaleString('en-IN')}</span>
+                    <span className="text-[9px] px-2 py-1 rounded bg-[var(--accent-dim)] text-[var(--accent)] font-bold uppercase">{m.type === 'part' ? 'PART' : 'DONOR DEVICE'}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Action buttons */}
       <div className="flex flex-wrap items-center gap-3 justify-between">

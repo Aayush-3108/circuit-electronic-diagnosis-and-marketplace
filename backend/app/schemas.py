@@ -152,3 +152,34 @@ class MarketplaceListing(BaseModel):
 
 class ListingStatusUpdateRequest(BaseModel):
     status: ListingStatus
+
+
+# --- Messaging -------------------------------------------------------------
+
+class ConversationMessage(BaseModel):
+    id: str
+    conversation_id: str
+    sender_uid: str
+    text: str
+    created_at: str
+
+class MessageCreateRequest(BaseModel):
+    text: str
+
+class Conversation(BaseModel):
+    id: str
+    listing_id: str
+    buyer_uid: str
+    seller_uid: str
+    created_at: str
+    last_message_at: str
+    last_message_text: Optional[str] = None
+    
+    listing_title: Optional[str] = None
+    listing_image: Optional[str] = None
+    other_user_email: Optional[str] = None
+
+class ConversationCreateRequest(BaseModel):
+    listing_id: str
+    seller_uid: str
+

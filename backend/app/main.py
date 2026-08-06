@@ -33,7 +33,12 @@ from app.schemas import (
     RepairShop,
     UpgradeAdviceRequest,
     UpgradeAdviceResponse,
+    Conversation,
+    ConversationCreateRequest,
+    ConversationMessage,
+    MessageCreateRequest,
 )
+from app import chat_service
 from app.upgrade_advisor import get_upgrade_advice
 from app.vision_service import detect_damage
 
@@ -255,3 +260,45 @@ from app.part_matching_service import part_matching_service
 def get_part_matches(device_type: str, brand: str, model_name: str, needed_part_category: str):
     """Find complementary broken devices or parts that can supply a needed component."""
     return {"matches": part_matching_service.find_matches(device_type, brand, model_name, needed_part_category)}
+
+# --- Messaging -------------------------------------------------------------
+
+@app.post("/api/conversations", response_model=Conversation)
+def create_or_get_conversation(req: ConversationCreateRequest, user: dict = Depends(require_user)):
+    listing = get_listing(req.listing_id)
+    if not listing:
+        raise HTTPException(status_code=404, detail="Listing not found")
+        
+    title = listing.title
+    image = ""
+    if listing.listing_type == "whole_device" and listing.images:
+        image = listing.images[0]
+    elif listing.listing_type == "parts" and listing.parts and listing.parts[0].images:
+        image = listing.parts[0].images[0]
+        
+    return chat_service.get_or_create_conversation(user["uid"], req.seller_uid, req.listing_id, title, image)
+
+@app.get("/api/conversations", response_model=list[Conversation])
+def get_conversations(user: dict = Depends(require_user)):
+    return chat_service.get_user_conversations(user["uid"])
+
+@app.get("/api/conversations/{conversation_id}/messages", response_model=list[ConversationMessage])
+def get_conversation_messages(conversation_id: str, user: dict = Depends(require_user)):
+    conv = chat_service.get_conversation(conversation_id)
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    if conv.buyer_uid != user["uid"] and conv.seller_uid != user["uid"]:
+        raise HTTPException(status_code=403, detail="Not a participant in this conversation")
+    
+    return chat_service.list_messages(conversation_id)
+
+@app.post("/api/conversations/{conversation_id}/messages", response_model=ConversationMessage)
+def create_message(conversation_id: str, req: MessageCreateRequest, user: dict = Depends(require_user)):
+    conv = chat_service.get_conversation(conversation_id)
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    if conv.buyer_uid != user["uid"] and conv.seller_uid != user["uid"]:
+        raise HTTPException(status_code=403, detail="Not a participant in this conversation")
+        
+    return chat_service.send_message(conversation_id, user["uid"], req.text)
+

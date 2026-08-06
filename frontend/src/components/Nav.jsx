@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import AuthModal from './AuthModal';
 
 const NAV_LINKS = [
   { id: 'analyze',     label: 'Diagnose' },
@@ -29,10 +28,9 @@ function MoonIcon() {
   );
 }
 
-export default function Nav({ view, setView }) {
+export default function Nav({ view, setView, onShowAuth }) {
   const { user, logout, firebaseConfigured } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const [showAuth, setShowAuth] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const links = [
@@ -87,10 +85,13 @@ export default function Nav({ view, setView }) {
 
           {/* User Auth CTA */}
           {user ? (
-            <div className="hidden sm:flex items-center gap-4">
-              <span className="text-xs text-[var(--text-muted)] truncate max-w-[140px]">
-                {user.email}
-              </span>
+            <div className="hidden sm:flex items-center gap-2">
+              <button onClick={() => setView('dashboard')} className={`btn btn-ghost text-xs ${view === 'dashboard' ? 'bg-[var(--surface-2)]' : ''}`}>
+                Dashboard
+              </button>
+              <button onClick={() => setView('inbox')} className={`btn btn-ghost text-xs ${view === 'inbox' ? 'bg-[var(--surface-2)]' : ''}`}>
+                Inbox
+              </button>
               <button
                 onClick={logout}
                 className="btn btn-outline text-xs px-4 py-2"
@@ -100,7 +101,7 @@ export default function Nav({ view, setView }) {
             </div>
           ) : (
             <button
-              onClick={() => setShowAuth(true)}
+              onClick={() => onShowAuth()}
               className="btn btn-primary text-xs px-4 py-2"
             >
               {firebaseConfigured ? 'Sign In' : 'Demo Login'}
@@ -134,9 +135,30 @@ export default function Nav({ view, setView }) {
               {l.label}
             </button>
           ))}
-          {!user && (
+          {user ? (
+            <>
+              <button
+                onClick={() => { setView('dashboard'); setMobileOpen(false); }}
+                className="block w-full text-left py-3 px-4 rounded-[var(--radius-sm)] hover:bg-[var(--surface-2)] font-semibold"
+              >
+                Dashboard
+              </button>
+              <button
+                onClick={() => { setView('inbox'); setMobileOpen(false); }}
+                className="block w-full text-left py-3 px-4 rounded-[var(--radius-sm)] hover:bg-[var(--surface-2)] font-semibold"
+              >
+                Inbox
+              </button>
+              <button
+                onClick={() => { logout(); setMobileOpen(false); }}
+                className="block w-full text-left py-3 px-4 rounded-[var(--radius-sm)] text-[var(--recycle)] font-semibold"
+              >
+                Sign Out
+              </button>
+            </>
+          ) : (
             <button
-              onClick={() => { setShowAuth(true); setMobileOpen(false); }}
+              onClick={() => { onShowAuth(); setMobileOpen(false); }}
               className="btn btn-primary w-full text-xs py-2.5 justify-center mt-2"
             >
               Sign In
@@ -144,8 +166,6 @@ export default function Nav({ view, setView }) {
           )}
         </div>
       )}
-
-      {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
     </header>
   );
 }

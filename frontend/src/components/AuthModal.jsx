@@ -30,50 +30,64 @@ export default function AuthModal({ onClose }) {
   const isPasswordWeak = password.length > 0 && password.length < 6;
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backdropFilter: 'blur(8px)', backgroundColor: 'rgba(0,0,0,0.55)' }}
+      onClick={() => { if (!loading) onClose(); }}
+    >
       <div
-        className="modal-panel max-w-sm rounded-[var(--radius-md)] relative tech-bracket"
+        className="w-full max-w-sm rounded-2xl relative shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
       >
-        <div className="p-6 md:p-8 space-y-5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              </svg>
-              <h2 className="font-mono text-xs tracking-wider text-[var(--accent)] uppercase font-semibold">
-                {mode === 'login' ? 'SIGN_IN' : 'CREATE_ACCOUNT'}
+        {/* Decorative gradient header */}
+        <div className="h-2 w-full bg-gradient-to-r from-[var(--sell)] via-[var(--accent)] to-[var(--upgrade)]"></div>
+        
+        <div className="p-6 md:p-8 space-y-6 bg-[var(--surface)]">
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <h2 className="text-2xl font-bold text-[var(--text)]">
+                {mode === 'login' ? 'Welcome back' : 'Create account'}
               </h2>
+              <p className="text-sm text-[var(--text-muted)]">
+                {mode === 'login' ? 'Sign in to your account' : 'Join the marketplace'}
+              </p>
             </div>
-            <button onClick={onClose} className="btn btn-ghost p-1 text-xs font-mono" aria-label="Close modal">
-              ✕
+            <button
+              onClick={() => { if (!loading) onClose(); }}
+              disabled={loading}
+              className="btn btn-ghost p-1 text-xl leading-none text-[var(--text-muted)] hover:text-[var(--text)] disabled:opacity-30 disabled:cursor-not-allowed"
+              aria-label="Close modal"
+            >
+              ×
             </button>
           </div>
 
           {!firebaseConfigured && (
-            <p className="font-mono text-[9px] text-[var(--repair)] bg-[var(--repair-dim)] p-3 rounded-[var(--radius-sm)] leading-relaxed border border-[var(--repair)]/30">
-              [WARN: AUTH_CLIENT_OFFLINE] Sandbox mode active. Any credentials accepted (min 6 chars).
-            </p>
+            <div className="flex gap-3 bg-[var(--repair-dim)] p-3 rounded-lg border border-[var(--repair)]/30">
+              <span className="text-[var(--repair)]">⚠</span>
+              <p className="text-xs text-[var(--repair)] leading-relaxed">
+                Sandbox mode active. Firebase is not configured, so any credentials will be accepted (min 6 chars).
+              </p>
+            </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1">
-              <label htmlFor="auth-email" className="block font-mono text-[9px] uppercase text-[var(--text-dim)]">[USER_EMAIL]</label>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-1.5">
+              <label htmlFor="auth-email" className="block text-sm font-medium text-[var(--text)]">Email address</label>
               <input
                 id="auth-email"
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="input-field font-mono text-xs uppercase"
+                className="input-field w-full text-base py-2.5"
                 placeholder="you@example.com"
               />
             </div>
-            <div className="space-y-1">
-              <label htmlFor="auth-password" className="block font-mono text-[9px] uppercase text-[var(--text-dim)]">[USER_PASSWORD]</label>
+            <div className="space-y-1.5">
+              <label htmlFor="auth-password" className="block text-sm font-medium text-[var(--text)]">Password</label>
               <input
                 id="auth-password"
                 type="password"
@@ -81,31 +95,41 @@ export default function AuthModal({ onClose }) {
                 minLength={6}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="input-field font-mono text-xs"
-                placeholder="••••••"
+                className="input-field w-full text-base py-2.5"
+                placeholder="••••••••"
               />
               {mode === 'signup' && isPasswordWeak && (
-                <p className="font-mono text-[8px] text-[var(--recycle)] uppercase">[ERROR: WEAK_PASSWD_MIN_6_CHAR]</p>
+                <p className="text-xs text-[var(--recycle)] mt-1">Password must be at least 6 characters.</p>
               )}
             </div>
 
-            {error && <p className="font-mono text-xs text-[var(--recycle)]">{error}</p>}
+            {error && <p className="text-sm text-[var(--recycle)] bg-[var(--recycle-dim)] p-2 rounded">{error}</p>}
 
             <button
               type="submit"
               disabled={loading}
-              className="btn btn-warm w-full justify-center text-xs"
+              className="btn btn-primary w-full justify-center text-sm py-3 mt-2 font-semibold shadow-md transition-transform hover:scale-[1.02] active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed disabled:scale-100"
             >
-              {loading ? 'PROCESSING...' : mode === 'login' ? 'SUBMIT: SIGN_IN' : 'SUBMIT: CREATE_ACCOUNT'}
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z" />
+                  </svg>
+                  Processing…
+                </span>
+              ) : mode === 'login' ? 'Sign In' : 'Create Account'}
             </button>
           </form>
 
-          <button
-            onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
-            className="w-full text-center font-mono text-[9px] text-[var(--text-dim)] hover:text-[var(--text)] transition-colors mt-2"
-          >
-            {mode === 'login' ? "[ACTION: SWITCH_TO_SIGNUP]" : "[ACTION: SWITCH_TO_LOGIN]"}
-          </button>
+          <div className="pt-2 text-center">
+            <button
+              onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
+              className="text-sm text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
+            >
+              {mode === 'login' ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
