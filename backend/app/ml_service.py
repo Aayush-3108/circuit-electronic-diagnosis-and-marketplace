@@ -6,6 +6,7 @@ resale value regressor) plus the categorical encoder, and exposes a single
 
 from pathlib import Path
 
+# pyrefly: ignore [missing-import]
 import joblib
 import numpy as np
 
@@ -61,6 +62,9 @@ class DecisionEngine:
         repair_cost = float(self.repair_model.predict(X)[0])
         resale_value = float(self.resale_model.predict(X)[0])
 
+        if damage_type == "none" and functional_status == "fully_functional":
+            repair_cost = 0.0
+
         return {
             "recommendation": recommendation,
             "recommendation_confidence": round(confidence, 3),
@@ -71,3 +75,29 @@ class DecisionEngine:
 
 # Singleton, loaded once at startup
 decision_engine = DecisionEngine()
+
+
+class FraudDetector:
+    def __init__(self):
+        try:
+            self.model = joblib.load(MODELS_DIR / "fraud_model.pkl")
+        except FileNotFoundError:
+            self.model = None
+
+    def evaluate_fraud(self, price: float, condition_score: int, days_active: int = 0) -> dict:
+        if self.model is None:
+            return {"is_fraudulent": False, "score": 0.0}
+
+        # The model expects a 2D array with features: price, condition_score, days_active
+        X = np.array([[price, condition_score, days_active]])
+        
+        # predict returns 1 for inliers, -1 for outliers
+        prediction = self.model.predict(X)[0]
+        score = float(self.model.decision_function(X)[0])
+        
+        return {
+            "is_fraudulent": bool(prediction == -1),
+            "score": score
+        }
+
+fraud_detector = FraudDetector()

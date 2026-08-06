@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getHistory, browseListings, updateListingStatus, deleteListing } from '../api';
+import { getHistory, browseListings, updateListingStatus, deleteListing, getDemandForecast } from '../api';
 import StatusChip from './StatusChip';
 import TraceDivider from './TraceDivider';
 
@@ -208,7 +208,16 @@ function ListingsTab({ onNavigate }) {
 
 /* ── Activity statistics ─────────────────────────────────────────────────── */
 function StatsTab() {
-  // Pure local stats calculation mockup
+  const [forecast, setForecast] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getDemandForecast()
+      .then((data) => setForecast(data.forecasts))
+      .catch((e) => console.error("Failed to load forecast:", e))
+      .finally(() => setLoading(false));
+  }, []);
+
   return (
     <div className="space-y-6 pt-2 fade-up">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -249,6 +258,30 @@ function StatsTab() {
             );
           })}
         </div>
+      </div>
+
+      <div className="card p-5 border-[var(--border)] rounded-[var(--radius-sm)] mt-6">
+        <p className="font-mono text-[9px] text-[var(--accent-warm)] font-bold tracking-wider mb-4">PART_DEMAND_FORECAST_AI</p>
+        {loading ? (
+          <div className="skeleton h-16 rounded-[var(--radius-sm)]" />
+        ) : forecast ? (
+          <div className="grid grid-cols-2 gap-4">
+            {Object.entries(forecast).map(([part, data]) => (
+              <div key={part} className="border border-[var(--border-subtle)] bg-[var(--surface)] p-3 rounded-[var(--radius-sm)] flex justify-between items-center">
+                <div>
+                  <p className="font-mono text-[10px] text-[var(--text-dim)] uppercase">{part}</p>
+                  <p className="font-bold text-sm text-[var(--text)] mt-1">{data.trend.toUpperCase()}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-mono text-[9px] text-[var(--text-muted)]">DEMAND SCORE</p>
+                  <p className="font-mono text-lg text-[var(--accent)] font-bold">{data.predicted_demand_score}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-[var(--text-dim)] font-mono">Failed to load forecast data.</p>
+        )}
       </div>
     </div>
   );

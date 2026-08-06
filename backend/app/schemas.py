@@ -1,5 +1,6 @@
 from typing import Literal, Optional
 
+# pyrefly: ignore [missing-import]
 from pydantic import BaseModel, Field
 
 DeviceType = Literal["phone", "laptop", "tablet", "pc", "monitor"]
@@ -87,7 +88,7 @@ class HistoryEntry(BaseModel):
 # --- Marketplace ---------------------------------------------------------
 
 ListingType = Literal["whole_device", "parts"]
-ListingStatus = Literal["active", "sold", "removed"]
+ListingStatus = Literal["active", "sold", "removed", "flagged"]
 PartCondition = Literal["excellent", "good", "fair", "damaged", "for_parts"]
 PartCategory = Literal[
     "screen", "battery", "motherboard", "camera", "keyboard",

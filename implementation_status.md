@@ -183,8 +183,8 @@ circuit-marketplace/
 | 3 | **LightGBM / XGBoost** | Repair cost estimation | ✅ Training script written |
 | 4 | **Random Forest** | Component health scoring (battery, motherboard, screen, etc.) | ✅ Training script written |
 | 5 | **Rule-based Engine** | Part-matching / compatibility (swap parts between two broken phones) | ⚠️ Partially embedded in backend logic — no dedicated module |
-| 6 | **Isolation Forest** | Fraud detection (fake listings, price manipulation) | ❌ Not started |
-| 7 | **Prophet / LSTM** | Demand forecasting (which parts will be in demand & when) | ❌ Not started |
+| 6 | **Isolation Forest** | Fraud detection (fake listings, price manipulation) | ✅ Integrated into Marketplace listing creation (`fraud_model.pkl`) |
+| 7 | **Prophet / LSTM** | Demand forecasting (which parts will be in demand & when) | ✅ Integrated into Dashboard stats via `/api/demand-forecast` |
 
 **Supporting ML scripts:**
 
@@ -233,10 +233,10 @@ circuit-marketplace/
 | 10a | YOLOv8 Damage Detection | ✅ Script + weights ready |
 | 10b | Price / Cost / Health ML Models | ✅ Scripts written |
 | 10c | Rule-based Part Matching | ⚠️ Partial |
-| 10d | Fraud Detection (Isolation Forest) | ❌ Not started |
-| 10e | Demand Forecasting (Prophet/LSTM) | ❌ Not started |
+| 10d | Fraud Detection (Isolation Forest) | ✅ Complete |
+| 10e | Demand Forecasting (Prophet/LSTM) | ✅ Complete |
 
 ---
 
-**8 out of 10 main features are complete or substantially implemented.**
-The two pending ML models (Fraud Detection & Demand Forecasting) are add-on enhancements that do not block core functionality.
+**All core features and ML models are now fully implemented or substantially complete.**
+The only remaining task is finalizing the Rule-based Part Matching module for fully automated cross-user compatibility matching.

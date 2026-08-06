@@ -53,6 +53,11 @@ export async function getRepairShops({ lat, lng, radiusKm = 5 }) {
   return handleResponse(res);
 }
 
+export async function getDemandForecast() {
+  const res = await fetch(`${API_URL}/api/demand-forecast`);
+  return handleResponse(res);
+}
+
 export async function sendChatMessage({ messages }) {
   const res = await fetch(`${API_URL}/api/chat`, {
     method: 'POST',

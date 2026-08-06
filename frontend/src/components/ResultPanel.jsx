@@ -114,7 +114,9 @@ export default function ResultPanel({ result, imageFile, onReset, onGoUpgrade, o
                   Est. repair cost
                 </p>
                 <p className="text-xl font-bold text-[var(--repair)]">
-                  ₹{Math.round(estimated_repair_cost_inr).toLocaleString('en-IN')}
+                  {estimated_repair_cost_inr > 0 
+                    ? `₹${Math.round(estimated_repair_cost_inr).toLocaleString('en-IN')}`
+                    : '₹0 (None)'}
                 </p>
               </div>
               <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] space-y-1">

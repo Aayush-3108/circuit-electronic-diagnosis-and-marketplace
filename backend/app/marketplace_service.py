@@ -1,4 +1,4 @@
-﻿"""
+"""
 Marketplace listings service.
 
 Storage priority:
@@ -21,14 +21,26 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+from app.ml_service import fraud_detector
+
 def create_listing(seller_uid: str, seller_email: str | None, req: ListingCreateRequest) -> MarketplaceListing:
     listing_id = str(uuid.uuid4())
+    
+    status = "active"
+    
+    # Fraud evaluation: check if price and condition combination is highly anomalous
+    if req.listing_type == "whole_device" and req.price_inr is not None:
+        condition_score = {"excellent": 5, "good": 4, "fair": 3, "damaged": 2, "for_parts": 1}.get(req.condition, 3)
+        fraud_result = fraud_detector.evaluate_fraud(price=req.price_inr, condition_score=condition_score, days_active=0)
+        if fraud_result.get("is_fraudulent"):
+            status = "flagged"
+
     record = {
         "id": listing_id,
         "seller_uid": seller_uid,
         "seller_email": seller_email,
         "created_at": _now_iso(),
-        "status": "active",
+        "status": status,
         **req.model_dump(),
     }
 

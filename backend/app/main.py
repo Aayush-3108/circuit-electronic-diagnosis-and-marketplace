@@ -1,4 +1,6 @@
+# pyrefly: ignore [missing-import]
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
+# pyrefly: ignore [missing-import]
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
@@ -140,9 +142,16 @@ def upgrade_advice(req: UpgradeAdviceRequest):
     return UpgradeAdviceResponse(advice=advice)
 
 
+from app.forecasting_service import forecasting_service
+
 @app.get("/api/repair-shops", response_model=list[RepairShop])
 def repair_shops(lat: float, lng: float, radius_km: float = 5.0):
     return find_nearby_repair_shops(lat, lng, radius_km)
+
+@app.get("/api/demand-forecast")
+def demand_forecast():
+    """Returns the demand forecast for various electronic parts."""
+    return forecasting_service.get_forecast()
 
 
 @app.post("/api/chat", response_model=ChatResponse)
@@ -239,3 +248,10 @@ def delete_marketplace_listing(listing_id: str, user: dict = Depends(require_use
     if not deleted:
         raise HTTPException(status_code=404, detail="Listing not found.")
     return {"deleted": True}
+
+from app.part_matching_service import part_matching_service
+
+@app.get("/api/marketplace/matches")
+def get_part_matches(device_type: str, brand: str, model_name: str, needed_part_category: str):
+    """Find complementary broken devices or parts that can supply a needed component."""
+    return {"matches": part_matching_service.find_matches(device_type, brand, model_name, needed_part_category)}
