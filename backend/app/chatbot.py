@@ -1,12 +1,4 @@
-"""
-Chatbot powered by Groq's free-tier API (OpenAI-compatible /chat/completions).
-Get a free key at https://console.groq.com/keys
 
-Groq's free tier includes fast open models like llama-3.3-70b-versatile,
-llama-3.1-8b-instant, and gemma2-9b-it -- plenty for a capstone chatbot with
-no cost. Rate limits are generous enough for demo/dev traffic; see
-https://console.groq.com/docs/rate-limits if you hit them.
-"""
 
 import requests
 

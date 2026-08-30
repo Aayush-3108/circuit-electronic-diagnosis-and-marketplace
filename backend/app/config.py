@@ -29,8 +29,12 @@ class Settings(BaseSettings):
     # Firebase (auth token verification) - service account JSON path
     firebase_credentials_path: str = ""
 
-    # CORS
-    allowed_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
+    # CORS — add any extra origins as a comma-separated env var ALLOWED_ORIGINS
+    allowed_origins: list[str] = [
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "https://circuit-electronic-diagnosis-and-ma.vercel.app",
+    ]
 
     class Config:
         env_file = ".env"
