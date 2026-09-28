@@ -24,7 +24,7 @@ class Settings(BaseSettings):
 
     # Groq (chatbot) - free tier, OpenAI-compatible API
     groq_api_key: str = ""
-    groq_model: str = "llama-3.3-70b-versatile"
+    groq_model: str = "openai/gpt-oss-20b"
 
     # Firebase (auth token verification) - service account JSON path
     firebase_credentials_path: str = ""
