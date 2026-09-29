@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { analyzeDevice } from '../api';
+import { CheckIcon } from './Icons';
 
 const DEVICE_TYPES = ['phone', 'laptop', 'tablet', 'pc', 'monitor'];
 const BRAND_TIERS = [
@@ -40,7 +41,7 @@ function StepIndicator({ current }) {
                   ? 'bg-[var(--accent)] text-white'
                   : 'bg-[var(--surface-2)] text-[var(--text-dim)] border border-[var(--border)]'
             }`}>
-              {i < current ? '✓' : i + 1}
+              {i < current ? <CheckIcon className="w-3.5 h-3.5" /> : i + 1}
             </span>
             <span className={`text-xs font-medium hidden sm:block ${
               i === current ? 'text-[var(--text)]' : 'text-[var(--text-muted)]'

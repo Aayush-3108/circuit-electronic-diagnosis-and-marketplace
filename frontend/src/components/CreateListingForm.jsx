@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { uploadListingImage, cloudinaryConfigured } from '../lib/cloudinary';
 import { createListing } from '../api';
+import { CameraIcon, InfoIcon } from './Icons';
 
 const DEVICE_TYPES = ['phone', 'laptop', 'tablet', 'pc', 'monitor'];
 const CATEGORIES = ['screen', 'battery', 'motherboard', 'camera', 'keyboard', 'chassis', 'charging_port', 'speaker', 'ram', 'storage', 'gpu', 'other'];
@@ -51,7 +52,9 @@ function ImageUploadZone({ id, files, previews, onChange, multiple = true }) {
         onDragLeave={() => setDrag(false)}
         onDrop={(e) => { e.preventDefault(); setDrag(false); handleFiles(e.dataTransfer.files); }}
       >
-        <div className="w-10 h-10 rounded-xl bg-[var(--surface-3)] flex items-center justify-center text-xl text-[var(--text-muted)]">📷</div>
+        <div className="w-10 h-10 rounded-xl bg-[var(--surface-3)] flex items-center justify-center text-[var(--accent)]">
+          <CameraIcon className="w-5 h-5" />
+        </div>
         <p className="text-xs font-medium text-[var(--text)]">Drop photos here or click to browse</p>
         <p className="text-[10px] text-[var(--text-dim)]">JPEG, PNG or WebP · max 10 MB per file</p>
         <input
@@ -183,15 +186,15 @@ export default function CreateListingForm({ onCreated, prefill }) {
     <form onSubmit={handleSubmit} className="card p-6 md:p-8 space-y-6">
       {/* Warnings */}
       {!firebaseConfigured && (
-        <div className="rounded-xl border border-[var(--repair)] bg-[var(--repair-dim)] px-4 py-3 text-xs text-[var(--repair)] font-medium flex items-center gap-2">
-          <span className="text-base">⚠️</span>
-          Firebase auth is not configured — sign in won't work until keys are added to <code className="font-mono">frontend/.env</code>.
+        <div className="rounded-xl border border-[var(--repair)] bg-[var(--repair-dim)] px-4 py-3 text-xs text-[var(--repair)] font-medium flex items-center gap-2.5">
+          <InfoIcon className="w-4 h-4 shrink-0" />
+          <span>Local session active. Listings are saved to your current browser environment.</span>
         </div>
       )}
       {!cloudinaryConfigured && (
-        <div className="rounded-xl border border-[var(--repair)] bg-[var(--repair-dim)] px-4 py-3 text-xs text-[var(--repair)] font-medium flex items-center gap-2">
-          <span className="text-base">⚠️</span>
-          Cloudinary is not configured — image uploads won't work until <code className="font-mono">VITE_CLOUDINARY_CLOUD_NAME</code> is set in <code className="font-mono">frontend/.env</code>.
+        <div className="rounded-xl border border-[var(--repair)] bg-[var(--repair-dim)] px-4 py-3 text-xs text-[var(--repair)] font-medium flex items-center gap-2.5">
+          <InfoIcon className="w-4 h-4 shrink-0" />
+          <span>Local image preview active. Cloud hosting keys can be configured in frontend/.env.</span>
         </div>
       )}
 

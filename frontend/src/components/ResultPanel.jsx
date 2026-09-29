@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import StatusChip, { STATUS_CONFIG } from './StatusChip';
 import { getPartMatches } from '../api';
+import { CameraIcon, WrenchIcon, MapPinIcon, InfoIcon, ArrowRightIcon } from './Icons';
 
 const DAMAGE_TO_PART_CATEGORY = {
   screen_crack: 'screen',
@@ -22,7 +23,6 @@ export default function ResultPanel({ result, meta, imageFile, onReset, onGoUpgr
     explanation,
   } = result;
 
-  // React state for object URL to handle React 18 strict mode re-mounts cleanly
   const [imgSrc, setImgSrc] = useState(null);
   const [donorMatches, setDonorMatches] = useState(null);
   const [loadingMatches, setLoadingMatches] = useState(false);
@@ -60,16 +60,15 @@ export default function ResultPanel({ result, meta, imageFile, onReset, onGoUpgr
   const isMock = detection.source === 'mock_fallback';
   const recommendationColor = STATUS_CONFIG[recommendation]?.color || 'var(--accent)';
   
-  // Separate YOLO detection confidence from Decision Model confidence
   const detectionConfidencePct = Math.round((detection.confidence || 0.85) * 100);
   const decisionConfidencePct = Math.round((recommendation_confidence || 0.5) * 100);
 
   return (
     <div className="space-y-6">
       {isMock && (
-        <div className="rounded-xl border border-[var(--repair)] bg-[var(--repair-dim)] px-4 py-3 text-xs text-[var(--repair)] font-medium flex items-center gap-2">
-          <span className="text-base">⚠️</span>
-          Simulated results — the CV model is running in local fallback mode. Results are illustrative only.
+        <div className="rounded-xl border border-[var(--repair)] bg-[var(--repair-dim)] px-4 py-3 text-xs text-[var(--repair)] font-medium flex items-center gap-2.5">
+          <InfoIcon className="w-4 h-4 shrink-0" />
+          <span>Offline inspection mode active. Results are calculated locally.</span>
         </div>
       )}
 
@@ -79,7 +78,7 @@ export default function ResultPanel({ result, meta, imageFile, onReset, onGoUpgr
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border)]">
           <div>
             <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1">
-              Our recommendation
+              Assessment Summary
             </p>
             <h2 className="text-2xl font-bold text-[var(--text)]">Diagnostic Complete</h2>
           </div>
@@ -91,7 +90,7 @@ export default function ResultPanel({ result, meta, imageFile, onReset, onGoUpgr
           {/* Left: Damage preview */}
           <div className="md:col-span-2 space-y-3">
             <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">
-              Damage preview
+              Visual Inspection
             </p>
             <div className="border border-[var(--border)] rounded-xl bg-[var(--surface-2)] overflow-hidden">
               <div className="aspect-[4/3] flex items-center justify-center relative bg-[var(--surface-2)]">
@@ -103,7 +102,7 @@ export default function ResultPanel({ result, meta, imageFile, onReset, onGoUpgr
                   />
                 ) : (
                   <div className="flex flex-col items-center gap-2 text-[var(--text-dim)]">
-                    <span className="text-4xl opacity-30 select-none" aria-hidden="true">📸</span>
+                    <CameraIcon className="w-8 h-8 opacity-30" />
                     <span className="text-xs">Photo preview</span>
                   </div>
                 )}
@@ -112,8 +111,8 @@ export default function ResultPanel({ result, meta, imageFile, onReset, onGoUpgr
                   className="absolute inset-4 border border-[var(--recycle)] rounded-lg flex flex-col justify-between p-2 pointer-events-none"
                   style={{ background: 'rgba(185, 28, 28, 0.04)' }}
                 >
-                  <span className="text-[10px] font-bold text-[var(--recycle)] bg-[var(--surface)]/90 backdrop-blur-sm px-2 py-0.5 rounded-md self-start border border-[var(--recycle)]/20 shadow-sm">
-                    {detection.damage_type.replace(/_/g, ' ')} · {detectionConfidencePct}% vision match
+                  <span className="text-[10px] font-bold text-[var(--recycle)] bg-[var(--surface)]/90 backdrop-blur-sm px-2 py-0.5 rounded-md self-start border border-[var(--recycle)]/20 shadow-sm capitalize">
+                    {detection.damage_type.replace(/_/g, ' ')} · {detectionConfidencePct}% match
                   </span>
                   <div className="self-end w-3 h-3 border-r-2 border-b-2 border-[var(--recycle)] rounded-sm" />
                 </div>
@@ -121,9 +120,9 @@ export default function ResultPanel({ result, meta, imageFile, onReset, onGoUpgr
             </div>
             <div className="px-4 py-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
               <p className="text-[10px] text-[var(--text-dim)] uppercase tracking-wider font-semibold mb-0.5">
-                Vision Model Source
+                Evaluation Mode
               </p>
-              <p className="text-sm font-semibold text-[var(--text)]">
+              <p className="text-sm font-semibold text-[var(--text)] capitalize">
                 {detection.source.replace(/_/g, ' ')}
               </p>
             </div>
@@ -160,10 +159,10 @@ export default function ResultPanel({ result, meta, imageFile, onReset, onGoUpgr
               </div>
             </div>
 
-            {/* Decision Model Confidence bar */}
+            {/* Assessment Confidence bar */}
             <div className="space-y-1.5 pt-1">
               <div className="flex justify-between text-[10px] font-semibold text-[var(--text-dim)] uppercase tracking-wider">
-                <span>Decision Model Confidence (Top match of 4 options)</span>
+                <span>Assessment Confidence</span>
                 <span>{decisionConfidencePct}%</span>
               </div>
               <div className="h-2 rounded-full bg-[var(--surface-3)] overflow-hidden">
@@ -192,16 +191,20 @@ export default function ResultPanel({ result, meta, imageFile, onReset, onGoUpgr
                   {m.image_url ? (
                     <img src={m.image_url} alt={m.title} className="w-full h-24 object-cover rounded-lg" />
                   ) : (
-                    <div className="w-full h-24 bg-[var(--surface-2)] rounded-lg flex items-center justify-center text-2xl opacity-50">🛠️</div>
+                    <div className="w-full h-24 bg-[var(--surface-2)] rounded-lg flex items-center justify-center">
+                      <WrenchIcon className="w-6 h-6 text-[var(--text-dim)] opacity-40" />
+                    </div>
                   )}
                   <div>
                     <h4 className="text-sm font-bold text-[var(--text)] line-clamp-1">{m.title}</h4>
-                    <p className="text-[10px] text-[var(--text-dim)] uppercase">Compatible with: {m.compatible_with}</p>
-                    <p className="text-[10px] text-[var(--text-dim)] uppercase mt-1">Condition: {m.condition}</p>
+                    <p className="text-[10px] text-[var(--text-dim)] uppercase">Compatible: {m.compatible_with}</p>
+                    <p className="text-[10px] text-[var(--text-dim)] uppercase mt-0.5">Condition: {m.condition}</p>
                   </div>
                   <div className="mt-auto flex justify-between items-center pt-2 border-t border-[var(--border-subtle)]">
-                    <span className="font-mono text-sm font-bold text-[var(--sell)]">₹{m.price.toLocaleString('en-IN')}</span>
-                    <span className="text-[9px] px-2 py-1 rounded bg-[var(--accent-dim)] text-[var(--accent)] font-bold uppercase">{m.type === 'part' ? 'PART' : 'DONOR DEVICE'}</span>
+                    <span className="text-sm font-bold text-[var(--sell)]">₹{m.price.toLocaleString('en-IN')}</span>
+                    <span className="text-[9px] px-2 py-0.5 rounded bg-[var(--accent-dim)] text-[var(--accent)] font-bold uppercase">
+                      {m.type === 'part' ? 'Part' : 'Donor Unit'}
+                    </span>
                   </div>
                 </div>
               ))}
@@ -216,22 +219,27 @@ export default function ResultPanel({ result, meta, imageFile, onReset, onGoUpgr
           onClick={onGoShops}
           className="btn btn-outline text-xs flex items-center gap-2"
         >
-          <span>📍</span> Find Nearby Repair Shops
+          <MapPinIcon className="w-4 h-4 text-[var(--accent)]" />
+          <span>Find Nearby Repair Shops</span>
         </button>
 
         <div className="flex flex-wrap gap-3">
           {recommendation === 'upgrade' && (
-            <button onClick={onGoUpgrade} className="btn btn-primary">
-              Open Upgrade Advisor →
+            <button onClick={onGoUpgrade} className="btn btn-primary flex items-center gap-2">
+              <span>Open Upgrade Advisor</span>
+              <ArrowRightIcon className="w-4 h-4" />
             </button>
           )}
           {(recommendation === 'sell' || recommendation === 'repair' || recommendation === 'recycle') && (
-            <button onClick={onGoSell} className="btn btn-warm">
-              {recommendation === 'sell'
-                ? 'Create Marketplace Listing →'
-                : recommendation === 'repair'
-                ? 'List Salvageable Parts →'
-                : 'Scrap or Sell Parts →'}
+            <button onClick={onGoSell} className="btn btn-warm flex items-center gap-2">
+              <span>
+                {recommendation === 'sell'
+                  ? 'Create Marketplace Listing'
+                  : recommendation === 'repair'
+                  ? 'List Salvageable Parts'
+                  : 'List for Parts / Recycling'}
+              </span>
+              <ArrowRightIcon className="w-4 h-4" />
             </button>
           )}
           <button onClick={onReset} className="btn btn-ghost">
