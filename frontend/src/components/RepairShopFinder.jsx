@@ -3,9 +3,14 @@ import { getRepairShops } from '../api';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { StarIcon, WrenchIcon, MapPinIcon } from './Icons';
+
+const PIN_SVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>`;
+const SHOP_SVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/></svg>`;
+const STAR_SVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
 
 // Custom inline SVG Leaflet markers with warm theme colors
-const createCustomIcon = (bgColor, textColor, char = '📍') => {
+const createCustomIcon = (bgColor, textColor, svgHtml = PIN_SVG) => {
   return L.divIcon({
     html: `
       <div style="
@@ -19,11 +24,10 @@ const createCustomIcon = (bgColor, textColor, char = '📍') => {
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 18px;
         cursor: pointer;
         transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
       " class="leaflet-marker-hover">
-        ${char}
+        ${svgHtml}
       </div>
     `,
     className: 'custom-leaflet-marker',
@@ -61,9 +65,9 @@ export default function RepairShopFinder() {
   const [radiusKm, setRadiusKm] = useState(10);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const userIcon = useMemo(() => createCustomIcon('#059669', '#FFFFFF', '📍'), []);
-  const shopIcon = useMemo(() => createCustomIcon('#EA580C', '#FFFFFF', '🏪'), []);
-  const activeShopIcon = useMemo(() => createCustomIcon('#1D4ED8', '#FFFFFF', '⭐'), []);
+  const userIcon = useMemo(() => createCustomIcon('#059669', '#FFFFFF', PIN_SVG), []);
+  const shopIcon = useMemo(() => createCustomIcon('#EA580C', '#FFFFFF', SHOP_SVG), []);
+  const activeShopIcon = useMemo(() => createCustomIcon('#1D4ED8', '#FFFFFF', STAR_SVG), []);
 
   async function fetchShops(lat, lng, radius) {
     setError(null);
@@ -177,7 +181,8 @@ export default function RepairShopFinder() {
             disabled={loading}
             className="btn btn-warm text-xs shrink-0 flex items-center justify-center gap-1.5"
           >
-            <span>📍</span> {loading ? 'Locating…' : 'Use My GPS Location'}
+            <MapPinIcon className="w-4 h-4" />
+            <span>{loading ? 'Locating…' : 'Use My GPS Location'}</span>
           </button>
         </div>
 
@@ -248,7 +253,7 @@ export default function RepairShopFinder() {
                         <div className="text-xs space-y-1 p-1">
                           <p className="font-bold text-gray-900">{shop.name}</p>
                           <p className="text-gray-600">{shop.address}</p>
-                          <p className="text-amber-600 font-semibold">★ {shop.rating} rating</p>
+                          <p className="text-amber-600 font-semibold">Rating: {shop.rating}</p>
                         </div>
                       </Popup>
                     </Marker>
@@ -257,9 +262,9 @@ export default function RepairShopFinder() {
             </MapContainer>
           </div>
           <div className="px-3 py-1.5 flex justify-between items-center text-[10px] text-[var(--text-dim)] font-medium">
-            <span>● Green Pin: Your Location</span>
-            <span>● Orange Pin: Repair Shop</span>
-            <span>● Blue Pin: Selected Center</span>
+            <span>● Green: Your Location</span>
+            <span>● Orange: Repair Center</span>
+            <span>● Blue: Selected Center</span>
           </div>
         </div>
 
@@ -287,7 +292,9 @@ export default function RepairShopFinder() {
 
             {!loading && shops && shops.length === 0 && (
               <div className="card p-6 text-center space-y-2">
-                <p className="text-2xl">🏪</p>
+                <div className="w-10 h-10 rounded-full bg-[var(--surface-3)] flex items-center justify-center mx-auto text-[var(--text-muted)]">
+                  <WrenchIcon className="w-5 h-5" />
+                </div>
                 <p className="text-xs font-semibold text-[var(--text)]">No shops found in {radiusKm}km radius</p>
                 <p className="text-[10px] text-[var(--text-muted)]">Try increasing search radius or picking a city above.</p>
               </div>
@@ -315,7 +322,8 @@ export default function RepairShopFinder() {
                       </div>
                       <div className="text-right shrink-0">
                         <span className="inline-flex items-center gap-1 text-xs font-bold text-[var(--repair)] bg-[var(--repair-dim)] px-2 py-0.5 rounded-md border border-[var(--repair)]/20">
-                          ★ {shop.rating}
+                          <StarIcon className="w-3 h-3 fill-current" />
+                          <span>{shop.rating}</span>
                         </span>
                       </div>
                     </div>

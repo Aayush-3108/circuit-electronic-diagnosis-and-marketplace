@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { getUpgradeAdvice } from '../api';
+import { UpgradeIcon, ArrowRightIcon } from './Icons';
 
 const DEVICE_TYPES = ['phone', 'laptop', 'tablet', 'pc', 'monitor'];
 const USE_CASES = ['Gaming', 'College/Work', 'Content Creation', 'Casual/Media', 'Coding/Development'];
@@ -86,69 +87,65 @@ export default function UpgradeAdvisor({ prefillDeviceType }) {
   }
 
   return (
-    <div className="card p-6 md:p-8 space-y-6 tech-bracket">
-      {/* Decorative corner indicators */}
-      <div className="absolute top-2 left-2 font-mono text-[8px] text-[var(--accent-warm)]">● ADVISORY_WIZARD_SYSTEM</div>
-      <div className="absolute top-2 right-2 font-mono text-[8px] text-[var(--text-dim)]">MODEL:GEMINI-1.5-FLASH</div>
-
+    <div className="card p-6 md:p-8 space-y-6">
       <div>
-        <p className="section-label mb-2">UPGRADE_ADVISORY_MODULE</p>
-        <h3 className="text-2xl font-bold mb-3 text-[var(--text)]">Target Hardware Planner</h3>
-        <p className="text-xs text-[var(--text-muted)] max-w-xl">
-          Structured diagnostic questionnaire matching hardware specifications, user workload constraints, and budget targets to alternative devices.
+        <span className="section-label">Upgrade & Compatibility</span>
+        <h2 className="text-2xl font-bold mt-1 text-[var(--text)]">Hardware Longevity Planner</h2>
+        <p className="text-xs sm:text-sm text-[var(--text-muted)] mt-1 max-w-xl">
+          Identify hardware bottlenecks, compare upgrade paths against replacement costs, and explore practical solutions for your current machine.
         </p>
       </div>
 
-      {/* Steps telemetry indicators */}
-      <div className="flex items-center gap-1.5 mb-6 border-b border-[var(--border-subtle)] pb-4">
+      {/* Steps indicator */}
+      <div className="flex items-center gap-2 border-b border-[var(--border)] pb-4 text-xs">
         {[
-          { label: '01.STATE_EVALUATION', active: step === 1 },
-          { label: '02.PARAMETRIC_TARGETS', active: step === 2 },
-          { label: '03.REPAIR_RECOMMENDATION', active: step === 3 },
+          { num: '01', label: 'Device Specs', active: step === 1 },
+          { num: '02', label: 'Workload & Budget', active: step === 2 },
+          { num: '03', label: 'Recommended Path', active: step === 3 },
         ].map((s, idx) => (
           <span
             key={idx}
-            className={`font-mono text-[9px] px-2.5 py-1 border rounded-[var(--radius-sm)] ${
+            className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
               s.active
-                ? 'border-[var(--accent)] text-[var(--accent)] bg-[var(--accent-dim)] font-bold'
-                : 'border-transparent text-[var(--text-dim)]'
+                ? 'bg-[var(--accent-dim)] text-[var(--accent)] font-semibold border border-[var(--accent)]/30'
+                : 'text-[var(--text-dim)]'
             }`}
           >
-            {s.label}
+            {s.num}. {s.label}
           </span>
         ))}
       </div>
 
       {/* STEP 1: Specs and Pain Points */}
       {step === 1 && (
-        <div className="space-y-5 fade-up">
+        <div className="space-y-5">
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <label className="block font-mono text-[9px] text-[var(--text-dim)] uppercase mb-1.5">[DEVICE_CLASS]</label>
-              <select value={deviceType} onChange={(e) => setDeviceType(e.target.value)} className="input-field">
-                {DEVICE_TYPES.map((t) => <option key={t} value={t}>{t.toUpperCase()}</option>)}
+              <label className="block text-xs font-semibold text-[var(--text)] mb-1.5">Device Type</label>
+              <select value={deviceType} onChange={(e) => setDeviceType(e.target.value)} className="input-field text-sm capitalize">
+                {DEVICE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
             <div>
-              <label className="block font-mono text-[9px] text-[var(--text-dim)] uppercase mb-1.5">[MODEL_STAMP]</label>
+              <label className="block text-xs font-semibold text-[var(--text)] mb-1.5">Brand & Model</label>
               <input
                 value={brandModel}
                 onChange={(e) => setBrandModel(e.target.value)}
-                placeholder="e.g. DELL XPS 13 9310"
-                className="input-field font-mono uppercase text-xs"
+                placeholder="e.g. Dell XPS 13, MacBook Air"
+                className="input-field text-sm"
               />
             </div>
             <div>
-              <label className="block font-mono text-[9px] text-[var(--text-dim)] uppercase mb-1.5">[CPU_PROCESSOR_LEVEL]</label>
-              <select value={cpu} onChange={(e) => setCpu(e.target.value)} className="input-field">
-                <option value="budget">ENTRY LEVEL / CHIPSETS_LOW</option>
-                <option value="mid">MID RANGE / CHIPSETS_NORMAL</option>
-                <option value="premium">HIGH PERFORMANCE / CHIPSETS_PRO</option>
+              <label className="block text-xs font-semibold text-[var(--text)] mb-1.5">Processor Tier</label>
+              <select value={cpu} onChange={(e) => setCpu(e.target.value)} className="input-field text-sm">
+                <option value="budget">Entry Level / Basic</option>
+                <option value="mid">Mid-Range / Mainstream</option>
+                <option value="premium">High Performance / Pro</option>
               </select>
             </div>
             <div>
-              <label className="block font-mono text-[9px] text-[var(--text-dim)] uppercase mb-1.5">[SYSTEM_MEMORY_RAM]</label>
-              <select value={ram} onChange={(e) => setRam(e.target.value)} className="input-field">
+              <label className="block text-xs font-semibold text-[var(--text)] mb-1.5">RAM Capacity</label>
+              <select value={ram} onChange={(e) => setRam(e.target.value)} className="input-field text-sm">
                 <option value="4GB">4 GB</option>
                 <option value="8GB">8 GB</option>
                 <option value="16GB">16 GB</option>
@@ -159,17 +156,20 @@ export default function UpgradeAdvisor({ prefillDeviceType }) {
 
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <label className="block font-mono text-[9px] text-[var(--text-dim)] uppercase mb-1.5">[DISK_CAPACITY_STORAGE]</label>
-              <select value={storage} onChange={(e) => setStorage(e.target.value)} className="input-field">
+              <label className="block text-xs font-semibold text-[var(--text)] mb-1.5">Storage Capacity</label>
+              <select value={storage} onChange={(e) => setStorage(e.target.value)} className="input-field text-sm">
                 <option value="64GB">64 GB</option>
                 <option value="128GB">128 GB</option>
                 <option value="256GB">256 GB</option>
                 <option value="512GB">512 GB</option>
-                <option value="1TB">1 TB+</option>
+                <option value="1TB">1 TB or higher</option>
               </select>
             </div>
             <div>
-              <label className="block font-mono text-[9px] text-[var(--text-dim)] uppercase mb-1.5">[ESTIMATED_AGE: {age} MO]</label>
+              <div className="flex justify-between text-xs font-semibold text-[var(--text)] mb-1.5">
+                <span>Device Age</span>
+                <span className="text-[var(--text-muted)] font-normal">{Math.round(age / 12 * 10) / 10} Years ({age} Months)</span>
+              </div>
               <input
                 type="range"
                 min="6"
@@ -179,16 +179,16 @@ export default function UpgradeAdvisor({ prefillDeviceType }) {
                 onChange={(e) => setAge(Number(e.target.value))}
                 className="w-full cursor-pointer mt-2"
                 style={{ accentColor: 'var(--accent)' }}
-                aria-label="Device age slider selector"
+                aria-label="Device age slider"
               />
-              <div className="flex justify-between font-mono text-[8px] text-[var(--text-dim)] mt-1 select-none">
-                <span>0.5 YR</span><span>2 YRS</span><span>4 YRS</span><span>8 YRS</span>
+              <div className="flex justify-between text-[11px] text-[var(--text-dim)] mt-1 select-none">
+                <span>6 mos</span><span>2 yrs</span><span>4 yrs</span><span>8 yrs</span>
               </div>
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="block font-mono text-[9px] text-[var(--text-dim)] uppercase">[OBSERVED_HARDWARE_LIMITATIONS]</label>
+            <label className="block text-xs font-semibold text-[var(--text)]">Observed Hardware Issues</label>
             <div className="flex flex-wrap gap-2">
               {PAIN_POINTS.map((pain) => {
                 const active = selectedPains.includes(pain);
@@ -197,13 +197,13 @@ export default function UpgradeAdvisor({ prefillDeviceType }) {
                     type="button"
                     key={pain}
                     onClick={() => togglePain(pain)}
-                    className={`font-mono text-[9px] tracking-wide px-3 py-1.5 rounded-[var(--radius-sm)] border transition-all ${
+                    className={`text-xs px-3 py-1.5 rounded-lg border transition-all ${
                       active
-                        ? 'border-[var(--accent)] bg-[var(--accent-dim)] text-[var(--accent)]'
+                        ? 'border-[var(--accent)] bg-[var(--accent-dim)] text-[var(--accent)] font-semibold'
                         : 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)] hover:border-[var(--text-dim)]'
                     }`}
                   >
-                    {pain.toUpperCase()}
+                    {pain}
                   </button>
                 );
               })}
@@ -211,8 +211,9 @@ export default function UpgradeAdvisor({ prefillDeviceType }) {
           </div>
 
           <div className="flex justify-end pt-3">
-            <button type="button" onClick={() => setStep(2)} className="btn btn-primary text-xs">
-              NEXT: SET PARAMETRIC TARGETS →
+            <button type="button" onClick={() => setStep(2)} className="btn btn-primary text-xs font-semibold">
+              Continue to Goals
+              <ArrowRightIcon className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
@@ -220,24 +221,24 @@ export default function UpgradeAdvisor({ prefillDeviceType }) {
 
       {/* STEP 2: Goals */}
       {step === 2 && (
-        <div className="space-y-5 fade-up">
+        <div className="space-y-5">
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <label className="block font-mono text-[9px] text-[var(--text-dim)] uppercase mb-1.5">[INR_BUDGET_CAP]</label>
+              <label className="block text-xs font-semibold text-[var(--text)] mb-1.5">Target Budget (₹)</label>
               <input
                 type="number"
                 value={budget}
                 onChange={(e) => setBudget(e.target.value)}
-                placeholder="e.g. 50000"
-                className="input-field font-mono"
+                placeholder="e.g. 25000"
+                className="input-field text-sm"
               />
-              <div className="flex gap-1.5 mt-2">
+              <div className="flex gap-2 mt-2">
                 {PRESETS_BUDGET.map((p) => (
                   <button
                     key={p.val}
                     type="button"
                     onClick={() => setBudget(p.val.toString())}
-                    className="font-mono text-[9px] px-2 py-0.5 rounded bg-[var(--surface-2)] border border-[var(--border)] hover:border-[var(--text-dim)]"
+                    className="text-xs px-2.5 py-1 rounded-md bg-[var(--surface-2)] border border-[var(--border)] hover:border-[var(--accent)] transition-colors text-[var(--text)]"
                   >
                     {p.label}
                   </button>
@@ -245,66 +246,67 @@ export default function UpgradeAdvisor({ prefillDeviceType }) {
               </div>
             </div>
             <div>
-              <label className="block font-mono text-[9px] text-[var(--text-dim)] uppercase mb-1.5">[TARGET_WORKLOAD]</label>
-              <select value={useCase} onChange={(e) => setUseCase(e.target.value)} className="input-field">
-                {USE_CASES.map((uc) => <option key={uc} value={uc}>{uc.toUpperCase()}</option>)}
+              <label className="block text-xs font-semibold text-[var(--text)] mb-1.5">Primary Workload</label>
+              <select value={useCase} onChange={(e) => setUseCase(e.target.value)} className="input-field text-sm">
+                {USE_CASES.map((uc) => <option key={uc} value={uc}>{uc}</option>)}
               </select>
             </div>
           </div>
 
           <div>
-            <label className="block font-mono text-[9px] text-[var(--text-dim)] uppercase mb-1.5">[SPECIFIC_CAPABILITY_GOALS]</label>
+            <label className="block text-xs font-semibold text-[var(--text)] mb-1.5">Specific Needs or Requirements</label>
             <textarea
               value={additionalGoals}
               onChange={(e) => setAdditionalGoals(e.target.value)}
-              placeholder="e.g. Needs to run local ML models, render raw 4K tracks, or fits inside a micro-chassis casing..."
+              placeholder="e.g. Needs smooth video editing playback, larger storage for projects, or longer battery life on the go..."
               rows={3}
-              className="input-field resize-none text-xs"
+              className="input-field resize-none text-sm"
             />
           </div>
 
           <div className="flex justify-between pt-3">
             <button type="button" onClick={() => setStep(1)} className="btn btn-outline text-xs">
-              ← BACK
+              Back
             </button>
-            <button type="button" onClick={handleGetAdvice} className="btn btn-warm text-xs">
-              CALCULATE UPGRADE ADVICE →
+            <button type="button" onClick={handleGetAdvice} className="btn btn-primary text-xs font-semibold">
+              Generate Upgrade Plan
+              <ArrowRightIcon className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
       )}
 
-      {/* STEP 3: Results (Terminal screen layout) */}
+      {/* STEP 3: Results */}
       {step === 3 && (
-        <div className="space-y-5 fade-up">
+        <div className="space-y-5">
           {loading && (
             <div className="py-12 space-y-4 text-center">
-              <div className="flex justify-center items-center gap-1.5">
-                <span className="typing-dot" />
-                <span className="typing-dot" />
-                <span className="typing-dot" />
-              </div>
-              <p className="font-mono text-[10px] text-[var(--text-dim)] uppercase">[PROCESSING: INFERENCE_RUNNING]</p>
+              <div className="inline-block animate-spin w-6 h-6 border-2 border-[var(--accent)] border-t-transparent rounded-full" />
+              <p className="text-xs text-[var(--text-muted)] font-medium">Analyzing hardware bottlenecks and compatible upgrade paths...</p>
             </div>
           )}
 
           {error && (
             <div className="space-y-4">
-              <p className="font-mono text-xs text-[var(--recycle)] uppercase">[ERROR: RUNTIME_FAULT] {error}</p>
-              <button onClick={() => setStep(2)} className="btn btn-outline text-xs">RETRY INFERENCE</button>
+              <p className="text-xs text-[var(--recycle)] bg-[var(--recycle-dim)] p-3 rounded-lg border border-[var(--recycle)]/30">
+                {error}
+              </p>
+              <button onClick={() => setStep(2)} className="btn btn-outline text-xs">
+                Retry
+              </button>
             </div>
           )}
 
           {advice && !loading && (
-            <div className="space-y-5 pt-2">
-              <div className="terminal-box whitespace-pre-wrap font-mono select-text">
-                {`/* CIRCUIT ADVISORY ENGINE EVALUATION SYSTEM */\n\n${advice}`}
+            <div className="space-y-5">
+              <div className="p-6 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm leading-relaxed text-[var(--text)] whitespace-pre-wrap">
+                {advice}
               </div>
 
               <div className="flex justify-between items-center border-t border-[var(--border-subtle)] pt-4">
-                <span className="font-mono text-[8px] text-[var(--text-dim)] uppercase">[TELEMETRY_ENGINE_OK]</span>
+                <span className="text-xs text-[var(--text-dim)]">Assessment complete</span>
                 <button onClick={resetAdvisor} className="btn btn-outline text-xs">
-                  RESET PLANS
+                  Start New Plan
                 </button>
               </div>
             </div>

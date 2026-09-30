@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { updateListingStatus, deleteListing, createOrGetConversation } from '../api';
 import { CONDITION_LABEL } from './ListingCard';
+import { ChatIcon } from './Icons';
 
 export default function ListingPage({ listing, onClose, onChanged, onChatStarted }) {
   const { user } = useAuth();
@@ -67,16 +68,16 @@ export default function ListingPage({ listing, onClose, onChanged, onChatStarted
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
-          <button onClick={onClose} className="btn btn-ghost p-1 text-xs font-mono mb-4 border border-[var(--border)] px-3 py-1 rounded">
-            ← BACK TO MARKETPLACE
+          <button onClick={onClose} className="btn btn-ghost p-1 text-xs mb-4 border border-[var(--border)] px-3 py-1 rounded-lg">
+            ← Back to Marketplace
           </button>
           <div className="flex items-center gap-2 mb-1.5 mt-2">
-            <span className="font-mono text-[9px] tracking-wider uppercase text-[var(--accent)] font-semibold">
-              {listing.listing_type === 'whole_device' ? 'WHOLE_UNIT_EXCHANGE' : 'SPARE_COMPONENTS'}
+            <span className="text-xs uppercase tracking-wider text-[var(--accent)] font-semibold">
+              {listing.listing_type === 'whole_device' ? 'Complete Device' : 'Modular Components'}
             </span>
             {listing.status !== 'active' && (
-              <span className="font-mono text-[9px] px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-[var(--recycle-dim)] text-[var(--recycle)] border border-[var(--recycle)]">
-                {listing.status.toUpperCase()}
+              <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--recycle-dim)] text-[var(--recycle)] border border-[var(--recycle)]/30 font-semibold">
+                Sold
               </span>
             )}
           </div>
@@ -163,16 +164,17 @@ export default function ListingPage({ listing, onClose, onChanged, onChatStarted
       {/* Footer / Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t border-[var(--border-subtle)] pt-5">
         <div className="space-y-3">
-          <p className="font-mono text-[9px] text-[var(--text-dim)] uppercase">
-            SELLER_UID: {listing.seller_email || 'hidden'}
+          <p className="text-xs text-[var(--text-dim)]">
+            Seller: <span className="text-[var(--text-muted)] font-medium">{listing.seller_email || 'Verified Community Member'}</span>
           </p>
           {!isOwner && listing.status === 'active' && (
             <button
               onClick={handleChat}
               disabled={busy}
-              className="btn btn-primary text-sm px-6 py-2"
+              className="btn btn-primary text-sm px-6 py-2.5 flex items-center gap-2"
             >
-              💬 CHAT WITH SELLER
+              <ChatIcon className="w-4 h-4" />
+              <span>Message Seller</span>
             </button>
           )}
         </div>
@@ -184,14 +186,14 @@ export default function ListingPage({ listing, onClose, onChanged, onChatStarted
               disabled={busy}
               className="btn btn-primary text-xs"
             >
-              MARK SOLD
+              Mark as Sold
             </button>
             <button
               onClick={handleDelete}
               disabled={busy}
-              className="btn btn-danger text-xs"
+              className="btn text-xs text-[var(--recycle)] border-[var(--recycle)]/30 hover:bg-[var(--recycle-dim)]"
             >
-              DELETE
+              Delete Listing
             </button>
           </div>
         )}

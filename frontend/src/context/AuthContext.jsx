@@ -9,14 +9,14 @@ import { auth, firebaseConfigured } from '../lib/firebase';
 
 const AuthContext = createContext(null);
 
-function createDemoUser(email) {
+function createMockUser(email) {
   const safeEmail = email || 'user@example.com';
-  const uid = 'demo_' + btoa(safeEmail).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+  const uid = 'usr_' + btoa(safeEmail).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
   const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
     .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
   const payload = btoa(JSON.stringify({ uid, user_id: uid, email: safeEmail, sub: uid }))
     .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-  const token = `${header}.${payload}.demo_sig`;
+  const token = `${header}.${payload}.recircuit_sig`;
 
   return {
     uid,
@@ -31,9 +31,9 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     if (!firebaseConfigured) {
-      const savedEmail = localStorage.getItem('circuit_demo_email');
+      const savedEmail = localStorage.getItem('recircuit_user_email');
       if (savedEmail) {
-        setUser(createDemoUser(savedEmail));
+        setUser(createMockUser(savedEmail));
       }
       setLoading(false);
       return;
@@ -47,8 +47,8 @@ export function AuthProvider({ children }) {
 
   async function signup(email, password) {
     if (!firebaseConfigured) {
-      localStorage.setItem('circuit_demo_email', email);
-      const u = createDemoUser(email);
+      localStorage.setItem('recircuit_user_email', email);
+      const u = createMockUser(email);
       setUser(u);
       return u;
     }
@@ -58,8 +58,8 @@ export function AuthProvider({ children }) {
 
   async function login(email, password) {
     if (!firebaseConfigured) {
-      localStorage.setItem('circuit_demo_email', email);
-      const u = createDemoUser(email);
+      localStorage.setItem('recircuit_user_email', email);
+      const u = createMockUser(email);
       setUser(u);
       return u;
     }
@@ -69,7 +69,7 @@ export function AuthProvider({ children }) {
 
   async function logout() {
     if (!firebaseConfigured) {
-      localStorage.removeItem('circuit_demo_email');
+      localStorage.removeItem('recircuit_user_email');
       setUser(null);
       return;
     }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { browseListings } from '../api';
 import ListingCard from './ListingCard';
+import { BoxIcon } from './Icons';
 
 const DEVICE_TYPES = ['phone', 'laptop', 'tablet', 'pc', 'monitor'];
 const CATEGORIES = ['screen', 'battery', 'motherboard', 'camera', 'keyboard', 'chassis', 'charging_port', 'speaker', 'ram', 'storage', 'gpu', 'other'];
@@ -112,7 +113,9 @@ export default function Marketplace({ onOpenListing, onSell }) {
 
         {!loading && !error && listings.length === 0 && (
           <div className="text-center py-20 border border-dashed border-[var(--border)] rounded-2xl space-y-4">
-            <p className="text-3xl">📦</p>
+            <div className="w-12 h-12 rounded-full bg-[var(--surface-3)] flex items-center justify-center mx-auto text-[var(--accent)]">
+              <BoxIcon className="w-6 h-6" />
+            </div>
             <p className="text-sm font-semibold text-[var(--text)]">No listings match your filters</p>
             <p className="text-xs text-[var(--text-muted)]">Try broadening your search, or be the first to list a component.</p>
             <button onClick={onSell} className="btn btn-outline text-xs mt-2">Create a listing</button>
