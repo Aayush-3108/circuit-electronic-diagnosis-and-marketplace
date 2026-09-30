@@ -20,7 +20,7 @@ class Settings(BaseSettings):
 
     # Upgrade Advisor (Google Gemini) - free tier
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-1.5-flash"
+    gemini_model: str = "gemini-flash-lite-latest"
 
     # Groq (chatbot) - free tier, OpenAI-compatible API
     groq_api_key: str = ""

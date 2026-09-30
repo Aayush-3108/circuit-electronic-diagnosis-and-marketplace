@@ -3,13 +3,25 @@ Upgrade advisor powered by Google Gemini's free tier.
 Get a free key at https://aistudio.google.com/apikey
 """
 
+import logging
 import requests
 
 from app.config import settings
 
+logger = logging.getLogger(__name__)
+
 GEMINI_URL_TEMPLATE = (
     "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 )
+
+# Resilient list of models to try in case of 503 high demand or 429 rate limits
+FALLBACK_MODELS = [
+    "gemini-flash-lite-latest",
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash-lite",
+    "gemini-3.8-flash",
+    "gemini-flash-latest",
+]
 
 
 def get_upgrade_advice(device_type: str, current_specs: str, budget_inr: float | None, use_case: str | None) -> str:
@@ -29,16 +41,38 @@ def get_upgrade_advice(device_type: str, current_specs: str, budget_inr: float |
         "Keep the response under 200 words, structured as a short list."
     )
 
-    url = GEMINI_URL_TEMPLATE.format(model=settings.gemini_model)
-    try:
-        resp = requests.post(
-            url,
-            params={"key": settings.gemini_api_key},
-            json={"contents": [{"parts": [{"text": prompt}]}]},
-            timeout=20,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        return data["candidates"][0]["content"]["parts"][0]["text"]
-    except (requests.RequestException, KeyError, IndexError) as e:
-        return f"Upgrade advisor is temporarily unavailable ({e})."
+    models_to_try = [settings.gemini_model] if settings.gemini_model else []
+    for model in FALLBACK_MODELS:
+        if model not in models_to_try:
+            models_to_try.append(model)
+
+    last_error = None
+    headers = {
+        "x-goog-api-key": settings.gemini_api_key,
+        "Content-Type": "application/json",
+    }
+
+    for model in models_to_try:
+        url = GEMINI_URL_TEMPLATE.format(model=model)
+        try:
+            resp = requests.post(
+                url,
+                headers=headers,
+                json={"contents": [{"parts": [{"text": prompt}]}]},
+                timeout=15,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                return data["candidates"][0]["content"]["parts"][0]["text"]
+
+            logger.warning("Gemini model %s returned status %s: %s", model, resp.status_code, resp.text[:200])
+            last_error = f"Model {model} returned status {resp.status_code}"
+        except (requests.RequestException, KeyError, IndexError) as e:
+            logger.warning("Gemini model %s failed: %s", model, e)
+            last_error = str(e)
+
+    return (
+        "Upgrade advisor is temporarily unavailable due to high demand on Gemini servers. "
+        "Please try again in a few moments."
+    )
+
