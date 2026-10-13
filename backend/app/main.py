@@ -37,6 +37,15 @@ from app.schemas import (
     ConversationCreateRequest,
     ConversationMessage,
     MessageCreateRequest,
+    RegisteredDevice,
+    DeviceRegistrationRequest,
+    CompatibilityEvaluationRequest,
+    CompatibilityEvaluationResponse,
+    ComponentSearchRequest,
+    MatchCandidate,
+    ReservationCreateRequest,
+    Reservation,
+    ListingReportRequest,
 )
 from app import chat_service
 from app.upgrade_advisor import get_upgrade_advice
@@ -255,11 +264,203 @@ def delete_marketplace_listing(listing_id: str, user: dict = Depends(require_use
     return {"deleted": True}
 
 from app.part_matching_service import part_matching_service
+from app.compatibility_engine import compatibility_engine
+from app import agent_suite
+from app import sqlite_store
+import uuid
+import datetime
 
 @app.get("/api/marketplace/matches")
 def get_part_matches(device_type: str, brand: str, model_name: str, needed_part_category: str):
     """Find complementary broken devices or parts that can supply a needed component."""
-    return {"matches": part_matching_service.find_matches(device_type, brand, model_name, needed_part_category)}
+    # Use matching_ranking_agent for evidence-based candidate scoring
+    all_listings = list_listings(status="active", limit=1000)
+    raw_listings_dicts = [l.model_dump() if hasattr(l, "model_dump") else dict(l) for l in all_listings]
+    
+    candidates = agent_suite.matching_ranking_agent.rank_candidates(
+        target_device_type=device_type,
+        target_brand=brand,
+        target_model_name=model_name,
+        needed_category=needed_part_category,
+        active_listings=raw_listings_dicts,
+    )
+    
+    # Return formatted list matching both legacy schema and enriched candidate models
+    legacy_format = []
+    for c in candidates:
+        legacy_format.append({
+            "listing_id": c.listing_id,
+            "part_id": c.part_id,
+            "type": c.type,
+            "title": c.title,
+            "price": c.price_inr,
+            "total_estimated_cost_inr": c.total_estimated_cost_inr,
+            "condition": c.condition,
+            "verification_level": c.verification_level,
+            "compatibility_outcome": c.compatibility_outcome,
+            "compatibility_score": c.compatibility_score,
+            "explanation": c.explanation,
+            "matched_specs": c.matched_specs,
+            "unverified_specs": c.unverified_specs,
+            "seller_id": c.seller_uid,
+            "image_url": c.image_url,
+            "compatible_with": c.model_name
+        })
+    return {"matches": legacy_format}
+
+
+# --- Component Reuse System Endpoints -------------------------------------
+
+@app.post("/api/devices", response_model=RegisteredDevice)
+def register_device(req: DeviceRegistrationRequest, user: dict = Depends(require_user)):
+    """Register a user device with model specs and ownership declaration."""
+    device_id = f"dev_{uuid.uuid4().hex[:10]}"
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    
+    record = {
+        "id": device_id,
+        "owner_uid": user["uid"],
+        "brand": req.brand,
+        "model_family": req.brand,
+        "model_name": req.model_name,
+        "exact_model_number": req.exact_model_number,
+        "variant_region": req.variant_region,
+        "device_type": req.device_type,
+        "condition": req.condition,
+        "purchase_year": req.purchase_year,
+        "ownership_declared": req.ownership_declared,
+        "created_at": now,
+        "diagnostic_reports": [{"summary": req.diagnostic_summary, "timestamp": now}] if req.diagnostic_summary else []
+    }
+    sqlite_store.save_device(record)
+    return RegisteredDevice(**record)
+
+
+@app.get("/api/devices", response_model=list[RegisteredDevice])
+def list_user_devices(user: dict = Depends(require_user)):
+    """List authenticated user's registered devices."""
+    records = sqlite_store.list_user_devices(user["uid"])
+    return [RegisteredDevice(**r) for r in records]
+
+
+@app.post("/api/marketplace/evaluate-compatibility", response_model=CompatibilityEvaluationResponse)
+def evaluate_compatibility(req: CompatibilityEvaluationRequest):
+    """Directly evaluate technical compatibility between target device and component."""
+    return compatibility_engine.evaluate(
+        target_device_type=req.target_device_type,
+        target_brand=req.target_brand,
+        target_model_name=req.target_model_name,
+        needed_category=req.needed_part_category,
+        target_exact_model=req.target_exact_model,
+        target_variant=req.target_variant,
+    )
+
+
+@app.post("/api/marketplace/compatible-components", response_model=list[MatchCandidate])
+def search_compatible_components(req: ComponentSearchRequest):
+    """Rank all active candidate components using AI matching agent + hard compatibility engine."""
+    all_listings = list_listings(status="active", limit=1000)
+    raw_dicts = [l.model_dump() if hasattr(l, "model_dump") else dict(l) for l in all_listings]
+    
+    return agent_suite.matching_ranking_agent.rank_candidates(
+        target_device_type=req.device_type,
+        target_brand=req.brand,
+        target_model_name=req.model_name,
+        needed_category=req.needed_part_category,
+        active_listings=raw_dicts,
+        target_exact_model=req.exact_model_number,
+        max_price_inr=req.max_price_inr,
+    )
+
+
+@app.post("/api/reservations", response_model=Reservation)
+def create_reservation(req: ReservationCreateRequest, user: dict = Depends(require_user)):
+    """
+    Atomically reserve a component or donor device.
+    Uses SQLite database transaction locks & idempotency protection to prevent race conditions.
+    """
+    listing = get_listing(req.listing_id)
+    if not listing:
+        raise HTTPException(status_code=404, detail="Listing not found")
+        
+    if listing.seller_uid == user["uid"]:
+        raise HTTPException(status_code=400, detail="Sellers cannot reserve their own listing")
+        
+    res_id = f"res_{uuid.uuid4().hex[:10]}"
+    now = datetime.datetime.now(datetime.timezone.utc)
+    expires = (now + datetime.timedelta(days=2)).isoformat()
+    
+    record = {
+        "id": res_id,
+        "listing_id": req.listing_id,
+        "part_id": req.part_id,
+        "buyer_uid": user["uid"],
+        "seller_uid": listing.seller_uid,
+        "status": "RESERVED",
+        "created_at": now.isoformat(),
+        "expires_at": expires,
+        "idempotency_key": req.idempotency_key,
+        "buyer_notes": req.buyer_notes,
+    }
+    
+    try:
+        saved = sqlite_store.create_atomic_reservation(record)
+        return Reservation(**saved)
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+
+
+@app.get("/api/reservations", response_model=list[Reservation])
+def get_user_reservations(user: dict = Depends(require_user)):
+    """List authenticated user's active/past reservations."""
+    records = sqlite_store.list_user_reservations(user["uid"])
+    return [Reservation(**r) for r in records]
+
+
+@app.patch("/api/reservations/{res_id}/status", response_model=Reservation)
+def update_reservation_status(res_id: str, status: str = Form(...), user: dict = Depends(require_user)):
+    """Update reservation state (e.g., mark SOLD or CANCELLED)."""
+    res = sqlite_store.get_reservation(res_id)
+    if not res:
+        raise HTTPException(status_code=404, detail="Reservation not found")
+        
+    if user["uid"] not in [res["buyer_uid"], res["seller_uid"]]:
+        raise HTTPException(status_code=403, detail="Not authorized to update this reservation")
+        
+    updated = sqlite_store.update_reservation_status(res_id, status)
+    return Reservation(**updated)
+
+
+@app.post("/api/marketplace/listings/{listing_id}/report")
+def report_listing(listing_id: str, req: ListingReportRequest, user: dict = Depends(require_user)):
+    """Submit a moderation report for a suspicious or unsafe component listing."""
+    listing = get_listing(listing_id)
+    if not listing:
+        raise HTTPException(status_code=404, detail="Listing not found")
+        
+    report_id = f"rep_{uuid.uuid4().hex[:10]}"
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    record = {
+        "id": report_id,
+        "listing_id": listing_id,
+        "reporter_uid": user["uid"],
+        "reason": req.reason,
+        "details": req.details,
+        "created_at": now,
+    }
+    sqlite_store.save_report(record)
+    return {"reported": True, "report_id": report_id}
+
+
+@app.post("/api/value-comparison")
+def compare_component_value(part_cost_inr: float = Form(...), original_price_inr: float = Form(30000.0), pro_repair_inr: float = Form(5000.0)):
+    """Run Value & Repair Comparison Agent."""
+    return agent_suite.value_comparison_agent.compare_options(
+        part_cost_inr=part_cost_inr,
+        device_original_price_inr=original_price_inr,
+        estimated_pro_repair_inr=pro_repair_inr
+    )
+
 
 # --- Messaging -------------------------------------------------------------
 
@@ -301,4 +502,5 @@ def create_message(conversation_id: str, req: MessageCreateRequest, user: dict =
         raise HTTPException(status_code=403, detail="Not a participant in this conversation")
         
     return chat_service.send_message(conversation_id, user["uid"], req.text)
+
 

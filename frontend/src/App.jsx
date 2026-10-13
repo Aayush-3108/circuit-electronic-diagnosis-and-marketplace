@@ -16,6 +16,8 @@ import AuthModal from "./components/AuthModal";
 import { useAuth } from "./context/AuthContext";
 import { CircuitIcon } from "./components/Icons";
 
+import MyDevicesTab from "./components/MyDevicesTab";
+
 export default function App() {
   const { user } = useAuth();
   const [view, setView] = useState("landing");
@@ -27,6 +29,15 @@ export default function App() {
   const [openListing, setOpenListing] = useState(null);
   const [activeConversation, setActiveConversation] = useState(null);
   const [marketplaceKey, setMarketplaceKey] = useState(0);
+  const [idToken, setIdToken] = useState(null);
+
+  useEffect(() => {
+    if (user && user.getIdToken) {
+      user.getIdToken().then(setIdToken);
+    } else {
+      setIdToken(null);
+    }
+  }, [user]);
 
   // If user logs in while on landing, redirect to the main diagnose tool
   useEffect(() => {
@@ -142,6 +153,12 @@ export default function App() {
               )}
 
               {view === "dashboard" && <Dashboard onNavigate={navigate} />}
+
+              {view === "devices" && (
+                <section className="mx-auto max-w-5xl px-5 py-12">
+                  <MyDevicesTab user={user} idToken={idToken} />
+                </section>
+              )}
 
               {view === "marketplace" && (
                 <Marketplace

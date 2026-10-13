@@ -173,3 +173,103 @@ export async function sendConversationMessage(conversationId, text, idToken) {
   });
   return handleResponse(res);
 }
+
+// --- Component Reuse & Compatibility System ---------------------------------
+
+export async function registerDevice(deviceData, idToken) {
+  const res = await fetch(`${API_URL}/api/devices`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${idToken}`,
+    },
+    body: JSON.stringify(deviceData),
+  });
+  return handleResponse(res);
+}
+
+export async function getUserDevices(idToken) {
+  const res = await fetch(`${API_URL}/api/devices`, {
+    headers: { Authorization: `Bearer ${idToken}` },
+  });
+  return handleResponse(res);
+}
+
+export async function searchCompatibleComponents(searchParams) {
+  const res = await fetch(`${API_URL}/api/marketplace/compatible-components`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      device_type: searchParams.deviceType,
+      brand: searchParams.brand,
+      model_name: searchParams.modelName,
+      exact_model_number: searchParams.exactModelNumber || null,
+      needed_part_category: searchParams.neededPartCategory,
+      max_price_inr: searchParams.maxPriceInr ? Number(searchParams.maxPriceInr) : null,
+    }),
+  });
+  return handleResponse(res);
+}
+
+export async function evaluateCompatibility(req) {
+  const res = await fetch(`${API_URL}/api/marketplace/evaluate-compatibility`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      target_device_type: req.targetDeviceType,
+      target_brand: req.targetBrand,
+      target_model_name: req.targetModelName,
+      target_exact_model: req.targetExactModel || null,
+      needed_part_category: req.neededPartCategory,
+    }),
+  });
+  return handleResponse(res);
+}
+
+export async function createReservation({ listingId, partId, buyerNotes, idempotencyKey }, idToken) {
+  const res = await fetch(`${API_URL}/api/reservations`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${idToken}`,
+    },
+    body: JSON.stringify({
+      listing_id: listingId,
+      part_id: partId || null,
+      buyer_notes: buyerNotes || '',
+      idempotency_key: idempotencyKey,
+    }),
+  });
+  return handleResponse(res);
+}
+
+export async function getUserReservations(idToken) {
+  const res = await fetch(`${API_URL}/api/reservations`, {
+    headers: { Authorization: `Bearer ${idToken}` },
+  });
+  return handleResponse(res);
+}
+
+export async function updateReservationStatus(resId, status, idToken) {
+  const form = new FormData();
+  form.append('status', status);
+  const res = await fetch(`${API_URL}/api/reservations/${resId}/status`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${idToken}` },
+    body: form,
+  });
+  return handleResponse(res);
+}
+
+export async function reportListing({ listingId, reason, details }, idToken) {
+  const res = await fetch(`${API_URL}/api/marketplace/listings/${listingId}/report`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${idToken}`,
+    },
+    body: JSON.stringify({ listing_id: listingId, reason, details }),
+  });
+  return handleResponse(res);
+}
+

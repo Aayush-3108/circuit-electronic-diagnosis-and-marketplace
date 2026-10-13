@@ -4,7 +4,6 @@
 .env.*.local
 *.env
 backend/.env
-backend/.env.example
 ml/scripts/.env
 
 # ── Python ─────────────────────────────────────────────────────────────────

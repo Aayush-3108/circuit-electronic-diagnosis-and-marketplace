@@ -85,15 +85,39 @@ class HistoryEntry(BaseModel):
     damage_type: DamageType
 
 
-# --- Marketplace ---------------------------------------------------------
+# --- Marketplace & Component Compatibility System ------------------------
 
 ListingType = Literal["whole_device", "parts"]
-ListingStatus = Literal["active", "sold", "removed", "flagged"]
+ListingStatus = Literal["active", "reserved", "sold", "paused", "removed", "flagged"]
 PartCondition = Literal["excellent", "good", "fair", "damaged", "for_parts"]
+VerificationLevel = Literal["seller_reported", "diagnostically_tested", "technician_verified", "refurbished", "unknown"]
+TestStatus = Literal["PASS", "FAIL", "NOT_TESTED", "UNKNOWN", "NOT_APPLICABLE"]
+CompatibilityOutcome = Literal["VERIFIED_COMPATIBLE", "LIKELY_COMPATIBLE", "INCOMPATIBLE", "UNKNOWN"]
+
 PartCategory = Literal[
     "screen", "battery", "motherboard", "camera", "keyboard",
-    "chassis", "charging_port", "speaker", "ram", "storage", "gpu", "other",
+    "chassis", "charging_port", "speaker", "ram", "storage", "gpu",
+    "cpu", "trackpad", "fans", "power_adapter", "other",
 ]
+
+
+class DiagnosticTestResult(BaseModel):
+    test_name: str
+    status: TestStatus
+    details: Optional[str] = None
+    tested_at: Optional[str] = None
+
+
+class ComponentSpecification(BaseModel):
+    part_number: Optional[str] = None
+    manufacturer: Optional[str] = None
+    interface_type: Optional[str] = None  # e.g., PCIe NVMe, M.2 SATA, eDP 30-pin, Apple 40-pin flex
+    form_factor: Optional[str] = None     # e.g., M.2 2280, 2.5-inch, SODIMM 260-pin
+    pin_count: Optional[int] = None
+    power_rating: Optional[str] = None    # e.g., 65W, 3.85V 4000mAh
+    revision: Optional[str] = None
+    capacity: Optional[str] = None        # e.g., 16GB, 512GB
+    specs_json: Optional[dict[str, str]] = Field(default_factory=dict)
 
 
 class PartListing(BaseModel):
@@ -103,9 +127,41 @@ class PartListing(BaseModel):
     price_inr: float = Field(..., ge=0)
     images: list[str] = Field(default_factory=list)
     description: Optional[str] = None
-    # free text describing which device models this part fits, e.g.
-    # "iPhone 12 / 12 Pro" or "Dell Inspiron 15 3000 series"
     compatible_models: Optional[str] = None
+    verification_level: VerificationLevel = "seller_reported"
+    specifications: Optional[ComponentSpecification] = None
+    test_results: list[DiagnosticTestResult] = Field(default_factory=list)
+    known_defects: Optional[str] = None
+    exact_model_number: Optional[str] = None
+    variant_region: Optional[str] = None
+
+
+class RegisteredDevice(BaseModel):
+    id: str
+    owner_uid: str
+    brand: str
+    model_family: str
+    model_name: str
+    exact_model_number: str
+    variant_region: Optional[str] = None
+    device_type: DeviceType
+    condition: PartCondition
+    purchase_year: Optional[int] = None
+    ownership_declared: bool = True
+    created_at: str
+    diagnostic_reports: list[dict] = Field(default_factory=list)
+
+
+class DeviceRegistrationRequest(BaseModel):
+    device_type: DeviceType
+    brand: str
+    model_name: str
+    exact_model_number: str
+    variant_region: Optional[str] = None
+    condition: PartCondition = "good"
+    purchase_year: Optional[int] = None
+    ownership_declared: bool = True
+    diagnostic_summary: Optional[str] = None
 
 
 class ListingCreateRequest(BaseModel):
@@ -115,6 +171,8 @@ class ListingCreateRequest(BaseModel):
     listing_type: ListingType
     title: str
     description: Optional[str] = None
+    exact_model_number: Optional[str] = None
+    variant_region: Optional[str] = None
 
     # populated when listing_type == "whole_device"
     images: list[str] = Field(default_factory=list)
@@ -138,6 +196,8 @@ class MarketplaceListing(BaseModel):
     device_type: DeviceType
     brand: str
     model_name: str
+    exact_model_number: Optional[str] = None
+    variant_region: Optional[str] = None
     listing_type: ListingType
     title: str
     description: Optional[str] = None
@@ -152,6 +212,98 @@ class MarketplaceListing(BaseModel):
 
 class ListingStatusUpdateRequest(BaseModel):
     status: ListingStatus
+
+
+class CompatibilityEvaluationRequest(BaseModel):
+    target_device_type: DeviceType
+    target_brand: str
+    target_model_name: str
+    target_exact_model: Optional[str] = None
+    target_variant: Optional[str] = None
+    needed_part_category: PartCategory
+    candidate_listing_id: Optional[str] = None
+    candidate_part_id: Optional[str] = None
+    part_number: Optional[str] = None
+
+
+class CompatibilityEvidenceSource(BaseModel):
+    title: str
+    source_type: Literal["manufacturer_spec", "verified_database", "technical_manual", "community_verified"]
+    url_or_ref: str
+    verification_date: str
+    notes: Optional[str] = None
+
+
+class CompatibilityEvaluationResponse(BaseModel):
+    outcome: CompatibilityOutcome
+    compatibility_score: float = Field(..., ge=0, le=100)
+    supporting_evidence: list[str] = Field(default_factory=list)
+    matched_specs: list[str] = Field(default_factory=list)
+    unverified_specs: list[str] = Field(default_factory=list)
+    detected_conflicts: list[str] = Field(default_factory=list)
+    evidence_sources: list[CompatibilityEvidenceSource] = Field(default_factory=list)
+    explanation: str
+    expert_verification_recommended: bool = False
+
+
+class ComponentSearchRequest(BaseModel):
+    device_type: DeviceType
+    brand: str
+    model_name: str
+    exact_model_number: Optional[str] = None
+    variant_region: Optional[str] = None
+    needed_part_category: PartCategory
+    max_price_inr: Optional[float] = None
+    min_verification_level: Optional[VerificationLevel] = None
+
+
+class MatchCandidate(BaseModel):
+    listing_id: str
+    part_id: Optional[str] = None
+    type: Literal["part", "donor_device"]
+    title: str
+    brand: str
+    model_name: str
+    exact_model_number: Optional[str] = None
+    price_inr: float
+    total_estimated_cost_inr: float
+    condition: PartCondition
+    verification_level: VerificationLevel
+    compatibility_outcome: CompatibilityOutcome
+    compatibility_score: float
+    explanation: str
+    matched_specs: list[str] = Field(default_factory=list)
+    unverified_specs: list[str] = Field(default_factory=list)
+    evidence_sources: list[CompatibilityEvidenceSource] = Field(default_factory=list)
+    seller_uid: str
+    seller_email: Optional[str] = None
+    image_url: Optional[str] = None
+
+
+class ReservationCreateRequest(BaseModel):
+    listing_id: str
+    part_id: Optional[str] = None
+    buyer_notes: Optional[str] = None
+    idempotency_key: str
+
+
+class Reservation(BaseModel):
+    id: str
+    listing_id: str
+    part_id: Optional[str] = None
+    buyer_uid: str
+    seller_uid: str
+    status: Literal["RESERVED", "SOLD", "CANCELLED", "EXPIRED"]
+    created_at: str
+    expires_at: str
+    idempotency_key: str
+    buyer_notes: Optional[str] = None
+
+
+class ListingReportRequest(BaseModel):
+    listing_id: str
+    reason: Literal["misleading_specs", "incompatible_claim", "counterfeit_suspected", "damaged_hazard", "other"]
+    details: str
 
 
 # --- Messaging -------------------------------------------------------------
@@ -182,4 +334,5 @@ class Conversation(BaseModel):
 class ConversationCreateRequest(BaseModel):
     listing_id: str
     seller_uid: str
+
 

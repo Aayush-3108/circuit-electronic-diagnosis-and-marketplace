@@ -31,6 +31,7 @@ export default function Nav({ view, setView, onShowAuth }) {
   const mainFeatures = [
     { id: 'analyze', label: 'Diagnose', icon: DiagnoseIcon },
     { id: 'marketplace', label: 'Marketplace', icon: MarketplaceIcon },
+    { id: 'devices', label: 'My Devices & Vault', icon: CircuitIcon },
     { id: 'upgrade', label: 'Upgrade Advisor', icon: UpgradeIcon },
   ];
 
