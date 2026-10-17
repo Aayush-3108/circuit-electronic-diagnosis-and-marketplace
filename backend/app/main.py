@@ -58,13 +58,40 @@ app = FastAPI(
     version="0.1.0",
 )
 
+# Configure CORS to safely support both specific domains and wildcard/Vercel domains
+configured_origins = (
+    settings.allowed_origins
+    if isinstance(settings.allowed_origins, list)
+    else [settings.allowed_origins]
+)
+
+if "*" in configured_origins or "all" in configured_origins:
+    cors_origin_regex = r".*"
+    cors_origins = []
+else:
+    # Always allow any Vercel deployment preview or production domain automatically
+    cors_origin_regex = r"^https:\/\/.*\.vercel\.app$"
+    cors_origins = [o for o in configured_origins if o != "*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.allowed_origins,
+    allow_origins=cors_origins,
+    allow_origin_regex=cors_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/")
+def root():
+    """Root status check endpoint."""
+    return {
+        "status": "online",
+        "service": "ReCircuit API",
+        "docs": "/docs",
+        "health": "/api/health",
+    }
 
 
 @app.get("/api/health")
@@ -75,6 +102,7 @@ def health():
         "firebase": fb,
         "storage_mode": "firestore" if fb["connected"] else "in-memory (data lost on restart)",
     }
+
 
 
 @app.post("/api/analyze-device", response_model=AnalyzeResponse)
