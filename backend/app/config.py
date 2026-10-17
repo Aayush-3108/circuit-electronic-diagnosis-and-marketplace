@@ -3,6 +3,8 @@ Central config, loaded from environment variables / .env file.
 Copy backend/.env.example to backend/.env and fill in your free-tier keys.
 """
 
+from typing import Any
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -30,11 +32,25 @@ class Settings(BaseSettings):
     firebase_credentials_path: str = ""
 
     # CORS — add any extra origins as a comma-separated env var ALLOWED_ORIGINS
-    allowed_origins: list[str] = [
+    allowed_origins: list[str] | str = [
         "http://localhost:5173",
         "http://localhost:3000",
         "https://circuit-electronic-diagnosis-and-ma.vercel.app",
     ]
+
+    @field_validator("allowed_origins", mode="after")
+    @classmethod
+    def parse_allowed_origins(cls, v: Any) -> list[str]:
+        if isinstance(v, str):
+            v = v.strip()
+            if v.startswith("[") and v.endswith("]"):
+                import json
+                try:
+                    return json.loads(v)
+                except Exception:
+                    pass
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
+        return v
 
     class Config:
         env_file = ".env"
@@ -42,3 +58,4 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
