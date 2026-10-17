@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     # Local YOLOv8 weights (from ml/scripts/train_yolo.py --copy-to-backend).
     # If this file exists, it's used instead of the Roboflow hosted endpoint
     # -- no per-call API cost, no external dependency at inference time.
-    yolo_local_weights_path: str = "models/yolo_damage_detector.pt"
+    yolo_local_weights_path: str = "models/yolo_damage_detector.onnx"
     yolo_confidence_threshold: float = 0.35
 
     # Upgrade Advisor (Google Gemini) - free tier
