@@ -70,6 +70,14 @@ Scroll down to the **Environment Variables** section on Render and click **Add E
 | `ALLOWED_ORIGINS` | `http://localhost:5173,https://your-frontend.vercel.app` | Comma-separated list of allowed frontend origins |
 | `YOLO_LOCAL_WEIGHTS_PATH` | `models/yolo_damage_detector.pt` | Path to damage detection model |
 | `YOLO_CONFIDENCE_THRESHOLD` | `0.35` | Confidence cutoff |
+| `FRAUD_MODEL_PATH` | `models/isolation_forest_fraud.joblib` | Isolation Forest trained model artifact |
+| `FRAUD_FEATURE_SCHEMA_PATH` | `models/fraud_feature_schema.joblib` | Model feature names & min/max scoring schema |
+| `FRAUD_CONTAMINATION` | `0.05` | Expected anomaly contamination rate (0.05 = 5%) |
+| `FRAUD_MODEL_VERSION` | `isolation_forest_v1.0` | Active model identifier tag |
+| `ADMIN_EMAILS` | `admin@recircuit.com,csdeshmukh3108@gmail.com` | Comma-separated emails allowed access to the Fraud Center |
+| `AUTH_RATE_LIMIT_MAX_ATTEMPTS` | `5` | Maximum failed logins before temporary cooldown |
+| `AUTH_RATE_LIMIT_WINDOW_MINUTES` | `10` | Rolling window to track failed attempts |
+| `AUTH_RATE_LIMIT_COOLDOWN_MINUTES`| `15` | Cooldown duration for locked accounts |
 
 *(Note: If you don't know your frontend Vercel URL yet, set `ALLOWED_ORIGINS` to `*` temporarily or update it once your frontend is live).*
 

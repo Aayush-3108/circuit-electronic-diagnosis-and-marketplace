@@ -38,9 +38,27 @@ class Settings(BaseSettings):
         "https://circuit-electronic-diagnosis-and-ma.vercel.app",
     ]
 
-    @field_validator("allowed_origins", mode="after")
+    # Fraud and Anomaly Detection (Isolation Forest)
+    fraud_model_path: str = "models/isolation_forest_fraud.joblib"
+    fraud_feature_schema_path: str = "models/fraud_feature_schema.joblib"
+    fraud_contamination: float = 0.05
+    fraud_model_version: str = "isolation_forest_v1.0"
+
+    # Admin emails with access to the fraud monitoring portal
+    admin_emails: list[str] | str = [
+        "admin@recircuit.com",
+        "admin@circuit.com",
+        "csdeshmukh3108@gmail.com",
+    ]
+
+    # Authentication Rate Limiting
+    auth_rate_limit_max_attempts: int = 5
+    auth_rate_limit_window_minutes: int = 10
+    auth_rate_limit_cooldown_minutes: int = 15
+
+    @field_validator("allowed_origins", "admin_emails", mode="after")
     @classmethod
-    def parse_allowed_origins(cls, v: Any) -> list[str]:
+    def parse_comma_separated_list(cls, v: Any) -> list[str]:
         if isinstance(v, str):
             v = v.strip()
             if v.startswith("[") and v.endswith("]"):
@@ -49,12 +67,15 @@ class Settings(BaseSettings):
                     return json.loads(v)
                 except Exception:
                     pass
-            return [origin.strip() for origin in v.split(",") if origin.strip()]
+            return [item.strip().lower() for item in v.split(",") if item.strip()]
+        if isinstance(v, list):
+            return [item.lower() if isinstance(item, str) else str(item) for item in v]
         return v
 
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+        extra = "ignore"
 
 
 settings = Settings()

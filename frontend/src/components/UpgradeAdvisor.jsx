@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { getUpgradeAdvice } from '../api';
-import { UpgradeIcon, ArrowRightIcon } from './Icons';
+import { ArrowRightIcon } from './Icons';
+import UpgradeResultsView from './UpgradeResultsView';
 
 const DEVICE_TYPES = ['phone', 'laptop', 'tablet', 'pc', 'monitor'];
 const USE_CASES = ['Gaming', 'College/Work', 'Content Creation', 'Casual/Media', 'Coding/Development'];
@@ -298,18 +299,18 @@ export default function UpgradeAdvisor({ prefillDeviceType }) {
           )}
 
           {advice && !loading && (
-            <div className="space-y-5">
-              <div className="p-6 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm leading-relaxed text-[var(--text)] whitespace-pre-wrap">
-                {advice}
-              </div>
-
-              <div className="flex justify-between items-center border-t border-[var(--border-subtle)] pt-4">
-                <span className="text-xs text-[var(--text-dim)]">Assessment complete</span>
-                <button onClick={resetAdvisor} className="btn btn-outline text-xs">
-                  Start New Plan
-                </button>
-              </div>
-            </div>
+            <UpgradeResultsView
+              advice={advice}
+              userContext={{
+                deviceType,
+                budget: budget ? Number(budget) : null,
+                useCase,
+                brandModel,
+                selectedPains,
+                additionalGoals,
+              }}
+              onReset={resetAdvisor}
+            />
           )}
         </div>
       )}

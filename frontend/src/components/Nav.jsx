@@ -24,7 +24,7 @@ function MoonIcon() {
 }
 
 export default function Nav({ view, setView, onShowAuth }) {
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -95,6 +95,20 @@ export default function Nav({ view, setView, onShowAuth }) {
           {/* User Auth: Standard SaaS Buttons */}
           {user ? (
             <div className="hidden sm:flex items-center gap-2">
+              {isAdmin && (
+                <button
+                  onClick={() => setView('admin_fraud')}
+                  className={`btn text-xs px-3 py-2 flex items-center gap-1.5 transition-all ${
+                    view === 'admin_fraud'
+                      ? 'bg-gradient-to-r from-indigo-500/20 to-purple-500/20 text-indigo-400 border border-indigo-500/40 font-bold'
+                      : 'text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 border border-indigo-500/20'
+                  }`}
+                  title="Fraud & Anomaly Control Center"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
+                  Fraud Center
+                </button>
+              )}
               <button
                 onClick={() => setView('dashboard')}
                 className={`btn btn-ghost text-xs px-3 py-2 ${view === 'dashboard' ? 'bg-[var(--surface-2)] font-semibold text-[var(--text)]' : ''}`}
@@ -164,6 +178,15 @@ export default function Nav({ view, setView, onShowAuth }) {
                 </button>
               ))}
               <div className="border-t border-[var(--border)] my-2" />
+              {isAdmin && (
+                <button
+                  onClick={() => { setView('admin_fraud'); setMobileOpen(false); }}
+                  className="w-full text-left py-2 px-3 rounded-lg text-sm text-indigo-400 font-bold hover:bg-indigo-500/10 flex items-center gap-2"
+                >
+                  <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+                  Fraud & Anomaly Control Center
+                </button>
+              )}
               <button
                 onClick={() => { setView('dashboard'); setMobileOpen(false); }}
                 className="w-full text-left py-2 px-3 rounded-lg text-sm text-[var(--text)] font-medium hover:bg-[var(--surface-2)]"

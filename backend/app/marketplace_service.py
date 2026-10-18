@@ -21,19 +21,14 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-from app.ml_service import fraud_detector
+from app.fraud_service import fraud_service
 
 def create_listing(seller_uid: str, seller_email: str | None, req: ListingCreateRequest) -> MarketplaceListing:
     listing_id = str(uuid.uuid4())
     
-    status = "active"
-    
-    # Fraud evaluation: check if price and condition combination is highly anomalous
-    if req.listing_type == "whole_device" and req.price_inr is not None:
-        condition_score = {"excellent": 5, "good": 4, "fair": 3, "damaged": 2, "for_parts": 1}.get(req.condition, 3)
-        fraud_result = fraud_detector.evaluate_fraud(price=req.price_inr, condition_score=condition_score, days_active=0)
-        if fraud_result.get("is_fraudulent"):
-            status = "flagged"
+    # Evaluate with Isolation Forest anomaly detection
+    fraud_eval = fraud_service.evaluate_listing(seller_uid, seller_email, req, listing_id=listing_id)
+    status = "flagged" if fraud_eval["is_flagged"] else "active"
 
     record = {
         "id": listing_id,
@@ -41,6 +36,8 @@ def create_listing(seller_uid: str, seller_email: str | None, req: ListingCreate
         "seller_email": seller_email,
         "created_at": _now_iso(),
         "status": status,
+        "fraud_assessment_id": fraud_eval.get("assessment_id"),
+        "risk_level": fraud_eval.get("risk_level", "low"),
         **req.model_dump(),
     }
 
@@ -147,12 +144,12 @@ def update_status(listing_id: str, requester_uid: str, new_status: str) -> Marke
     return listing
 
 
-def delete_listing(listing_id: str, requester_uid: str) -> bool:
+def delete_listing(listing_id: str, requester_uid: str, is_admin: bool = False) -> bool:
     listing = get_listing(listing_id)
     if listing is None:
         return False
-    if listing.seller_uid != requester_uid:
-        raise PermissionError("Only the seller can delete this listing.")
+    if listing.seller_uid != requester_uid and not is_admin:
+        raise PermissionError("Only the seller or an authorized administrator can delete this listing.")
 
     db = get_firestore()
     if db is not None:

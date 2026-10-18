@@ -13,13 +13,14 @@ import Dashboard from "./components/Dashboard";
 import Inbox from "./components/Inbox";
 import Conversation from "./components/Conversation";
 import AuthModal from "./components/AuthModal";
+import AdminFraudDashboard from "./components/AdminFraudDashboard";
 import { useAuth } from "./context/AuthContext";
 import { CircuitIcon } from "./components/Icons";
 
 import MyDevicesTab from "./components/MyDevicesTab";
 
 export default function App() {
-  const { user } = useAuth();
+  const { user, isAdmin, isRestricted, restrictionReason } = useAuth();
   const [view, setView] = useState("landing");
   const [result, setResult] = useState(null);
   const [imageFile, setImageFile] = useState(null);
@@ -94,6 +95,10 @@ export default function App() {
       openAuth("signup");
       return;
     }
+    if (v === "admin_fraud" && !isAdmin) {
+      setView("marketplace");
+      return;
+    }
     setView(v);
     if (v !== "analyze") resetAnalysis();
   }
@@ -126,6 +131,17 @@ export default function App() {
           {/* Authenticated Application Experience */}
           {user && (
             <>
+              {isRestricted && (
+                <div className="bg-red-500/15 border-b border-red-500/30 px-6 py-3 text-xs text-red-300 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-red-400 animate-ping" />
+                    <span className="font-semibold">Account Notice:</span>
+                    <span>Your account has been temporarily restricted. ({restrictionReason || 'Account undergoing trust & safety review'})</span>
+                  </div>
+                  <span className="text-[11px] text-red-300/80">Marketplace actions restricted</span>
+                </div>
+              )}
+
               {view === "analyze" && (
                 <section className="mx-auto max-w-5xl px-5 py-12">
                   <div className="mb-8">
@@ -221,6 +237,12 @@ export default function App() {
               {view === "shops" && (
                 <section className="mx-auto max-w-4xl px-5 py-12">
                   <RepairShopFinder />
+                </section>
+              )}
+
+              {view === "admin_fraud" && (
+                <section className="mx-auto max-w-7xl px-2 py-4">
+                  <AdminFraudDashboard />
                 </section>
               )}
             </>

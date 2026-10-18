@@ -44,11 +44,18 @@ export default function ListingCard({ listing, onOpen }) {
             <span className="text-[11px] uppercase tracking-wider text-[var(--accent)] font-semibold">
               {listing.listing_type === 'whole_device' ? 'Complete Device' : 'Modular Parts'}
             </span>
-            {listing.listing_type === 'whole_device' && listing.condition && (
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--surface-2)] text-[var(--text-muted)] border border-[var(--border-subtle)] font-medium">
-                {CONDITION_LABEL[listing.condition]}
-              </span>
-            )}
+            <div className="flex items-center gap-1.5">
+              {listing.status === 'flagged' && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 font-semibold">
+                  Under Review
+                </span>
+              )}
+              {listing.listing_type === 'whole_device' && listing.condition && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--surface-2)] text-[var(--text-muted)] border border-[var(--border-subtle)] font-medium">
+                  {CONDITION_LABEL[listing.condition]}
+                </span>
+              )}
+            </div>
           </div>
           <h3 className="font-semibold text-sm leading-snug text-[var(--text)] line-clamp-2">{listing.title}</h3>
           <p className="text-xs text-[var(--text-muted)]">{listing.brand} · {listing.model_name}</p>

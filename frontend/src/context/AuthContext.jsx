@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
@@ -6,6 +6,7 @@ import {
   signOut,
 } from 'firebase/auth';
 import { auth, firebaseConfigured } from '../lib/firebase';
+import { getSecurityMe } from '../api';
 
 const AuthContext = createContext(null);
 
@@ -28,22 +29,56 @@ function createMockUser(email) {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isRestricted, setIsRestricted] = useState(false);
+  const [restrictionReason, setRestrictionReason] = useState(null);
+
+  const refreshSecurity = useCallback(async (currentUser) => {
+    const targetUser = currentUser || user;
+    if (!targetUser || !targetUser.getIdToken) {
+      setIsAdmin(false);
+      setIsRestricted(false);
+      setRestrictionReason(null);
+      return;
+    }
+    try {
+      const token = await targetUser.getIdToken();
+      const sec = await getSecurityMe(token);
+      setIsAdmin(Boolean(sec.is_admin));
+      setIsRestricted(Boolean(sec.is_restricted));
+      setRestrictionReason(sec.restriction_reason || null);
+    } catch {
+      // In local offline fallback or guest mode
+      setIsAdmin(false);
+      setIsRestricted(false);
+      setRestrictionReason(null);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!firebaseConfigured) {
       const savedEmail = localStorage.getItem('recircuit_user_email');
       if (savedEmail) {
-        setUser(createMockUser(savedEmail));
+        const u = createMockUser(savedEmail);
+        setUser(u);
+        refreshSecurity(u);
       }
       setLoading(false);
       return;
     }
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
+    const unsubscribe = onAuthStateChanged(auth, async (u) => {
       setUser(u);
+      if (u) {
+        await refreshSecurity(u);
+      } else {
+        setIsAdmin(false);
+        setIsRestricted(false);
+        setRestrictionReason(null);
+      }
       setLoading(false);
     });
     return unsubscribe;
-  }, []);
+  }, [refreshSecurity]);
 
   async function signup(email, password) {
     if (!firebaseConfigured) {
@@ -77,7 +112,20 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, signup, login, logout, firebaseConfigured }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        isAdmin,
+        isRestricted,
+        restrictionReason,
+        refreshSecurity,
+        signup,
+        login,
+        logout,
+        firebaseConfigured,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

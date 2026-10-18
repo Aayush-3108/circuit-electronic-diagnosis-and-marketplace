@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { CloseIcon, InfoIcon } from './Icons';
+import { checkLoginAttempt, recordLoginResult } from '../api';
 
 export default function AuthModal({ onClose, initialMode = 'login' }) {
   const { login, signup, firebaseConfigured } = useAuth();
@@ -9,18 +10,59 @@ export default function AuthModal({ onClose, initialMode = 'login' }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [cooldownSec, setCooldownSec] = useState(0);
+
+  // Cooldown countdown timer
+  useEffect(() => {
+    if (cooldownSec <= 0) return;
+    const timer = setInterval(() => {
+      setCooldownSec((prev) => (prev > 1 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldownSec]);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError(null);
+
+    if (cooldownSec > 0) {
+      setError(`Account is temporarily protected. Please wait ${Math.ceil(cooldownSec / 60)} more minute(s) before trying again.`);
+      return;
+    }
+
     setLoading(true);
     try {
       if (mode === 'login') {
-        await login(email, password);
+        // 1. Pre-check rate limit on backend
+        try {
+          const rateCheck = await checkLoginAttempt(email);
+          if (rateCheck && !rateCheck.allowed) {
+            setCooldownSec(rateCheck.cooldown_seconds || 900);
+            setError(rateCheck.message || 'Too many failed login attempts. Please wait before retrying.');
+            setLoading(false);
+            return;
+          }
+        } catch {
+          // If security check network error, fail open safely
+        }
+
+        // 2. Perform direct credential sign-in
+        try {
+          await login(email, password);
+          // 3. Record successful login event
+          recordLoginResult({ email, success: true }).catch(() => {});
+          onClose();
+        } catch (loginErr) {
+          // 4. Record failed attempt for anomaly tracking & brute force protection
+          const code = loginErr.code || 'auth/wrong-credentials';
+          recordLoginResult({ email, success: false, errorCode: code }).catch(() => {});
+          throw loginErr;
+        }
       } else {
         await signup(email, password);
+        recordLoginResult({ email, success: true }).catch(() => {});
+        onClose();
       }
-      onClose();
     } catch (err) {
       setError(err.message?.replace('Firebase: ', '') || 'Authentication failed. Please verify credentials.');
     } finally {

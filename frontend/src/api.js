@@ -274,3 +274,139 @@ export async function reportListing({ listingId, reason, details }, idToken) {
   return handleResponse(res);
 }
 
+// ==========================================
+// Security & Rate Limiting APIs
+// ==========================================
+
+export async function checkLoginAttempt(email, ipAddress = null) {
+  const res = await fetch(`${API_URL}/api/security/login-attempt`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, ip_address: ipAddress }),
+  });
+  return handleResponse(res);
+}
+
+export async function recordLoginResult({ email, success, errorCode = null, ipAddress = null, userAgent = null }) {
+  const res = await fetch(`${API_URL}/api/security/login-result`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email,
+      success,
+      error_code: errorCode,
+      ip_address: ipAddress,
+      user_agent: userAgent || (typeof navigator !== 'undefined' ? navigator.userAgent : null),
+    }),
+  });
+  return handleResponse(res);
+}
+
+export async function getSecurityMe(idToken) {
+  const res = await fetch(`${API_URL}/api/security/me`, {
+    headers: { Authorization: `Bearer ${idToken}` },
+  });
+  return handleResponse(res);
+}
+
+// ==========================================
+// Fraud Detection & Admin Center APIs
+// ==========================================
+
+export async function getFraudHealth() {
+  const res = await fetch(`${API_URL}/api/fraud/health`);
+  return handleResponse(res);
+}
+
+export async function getFraudSummary(idToken) {
+  const res = await fetch(`${API_URL}/api/fraud/admin/summary`, {
+    headers: { Authorization: `Bearer ${idToken}` },
+  });
+  return handleResponse(res);
+}
+
+export async function getFraudAssessments({ riskLevel, reviewStatus, eventType, search, limit = 50, offset = 0 } = {}, idToken) {
+  const params = new URLSearchParams();
+  if (riskLevel && riskLevel !== 'all') params.append('risk_level', riskLevel);
+  if (reviewStatus && reviewStatus !== 'all') params.append('review_status', reviewStatus);
+  if (eventType && eventType !== 'all') params.append('event_type', eventType);
+  if (search) params.append('search', search);
+  params.append('limit', limit);
+  params.append('offset', offset);
+
+  const res = await fetch(`${API_URL}/api/fraud/admin/assessments?${params.toString()}`, {
+    headers: { Authorization: `Bearer ${idToken}` },
+  });
+  return handleResponse(res);
+}
+
+export async function getFraudAssessmentDetail(eventId, idToken) {
+  const res = await fetch(`${API_URL}/api/fraud/admin/assessments/${eventId}`, {
+    headers: { Authorization: `Bearer ${idToken}` },
+  });
+  return handleResponse(res);
+}
+
+export async function reviewFraudAssessment(eventId, { reviewStatus, reviewNotes }, idToken) {
+  const res = await fetch(`${API_URL}/api/fraud/admin/assessments/${eventId}/review`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${idToken}`,
+    },
+    body: JSON.stringify({
+      review_status: reviewStatus,
+      review_notes: reviewNotes || null,
+    }),
+  });
+  return handleResponse(res);
+}
+
+export async function updateUserRestriction(userId, { isRestricted, reason }, idToken) {
+  const res = await fetch(`${API_URL}/api/fraud/admin/users/${userId}/restriction`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${idToken}`,
+    },
+    body: JSON.stringify({
+      is_restricted: isRestricted,
+      reason: reason || null,
+    }),
+  });
+  return handleResponse(res);
+}
+
+export async function deleteFraudListing(listingId, idToken) {
+  const res = await fetch(`${API_URL}/api/fraud/admin/listings/${listingId}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${idToken}`,
+    },
+  });
+  return handleResponse(res);
+}
+
+export async function deleteFraudAssessment(assessmentId, idToken) {
+  const res = await fetch(`${API_URL}/api/fraud/admin/assessments/${assessmentId}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${idToken}`,
+    },
+  });
+  return handleResponse(res);
+}
+
+export async function pruneFraudAssessments(idToken) {
+  const res = await fetch(`${API_URL}/api/fraud/admin/prune-events`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${idToken}`,
+    },
+  });
+  return handleResponse(res);
+}
+
+
+
+

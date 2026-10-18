@@ -75,9 +75,15 @@ export default function ListingPage({ listing, onClose, onChanged, onChatStarted
             <span className="text-xs uppercase tracking-wider text-[var(--accent)] font-semibold">
               {listing.listing_type === 'whole_device' ? 'Complete Device' : 'Modular Components'}
             </span>
-            {listing.status !== 'active' && (
+            {listing.status === 'sold' && (
               <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--recycle-dim)] text-[var(--recycle)] border border-[var(--recycle)]/30 font-semibold">
                 Sold
+              </span>
+            )}
+            {listing.status === 'flagged' && (
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 font-semibold flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                Under Verification
               </span>
             )}
           </div>

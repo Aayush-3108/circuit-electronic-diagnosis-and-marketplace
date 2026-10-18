@@ -5,6 +5,7 @@
 *.env
 backend/.env
 ml/scripts/.env
+backend/data/circuit_local.db
 
 # ── Python ─────────────────────────────────────────────────────────────────
 __pycache__/

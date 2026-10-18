@@ -1,10 +1,10 @@
-# pyrefly: ignore [missing-import]
+from typing import Optional
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 # pyrefly: ignore [missing-import]
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.auth_deps import get_optional_user, require_user
+from app.auth_deps import get_optional_user, require_user, require_admin, is_admin_user
 from app.firebase_admin_client import firebase_status
 from app.chatbot import get_chat_reply
 from app.history_service import get_history, save_analysis
@@ -46,10 +46,20 @@ from app.schemas import (
     ReservationCreateRequest,
     Reservation,
     ListingReportRequest,
+    FraudAssessment,
+    FraudReviewActionRequest,
+    FraudSummaryMetrics,
+    LoginAttemptRequest,
+    LoginAttemptResponse,
+    LoginResultRequest,
+    UserRestrictionRequest,
 )
 from app import chat_service
 from app.upgrade_advisor import get_upgrade_advice
 from app.vision_service import detect_damage
+from app.fraud_service import fraud_service
+from app.security_service import security_service
+from app import sqlite_store
 
 app = FastAPI(
     title="Circuit API",
@@ -284,7 +294,8 @@ def update_marketplace_listing_status(
 @app.delete("/api/marketplace/listings/{listing_id}")
 def delete_marketplace_listing(listing_id: str, user: dict = Depends(require_user)):
     try:
-        deleted = delete_listing(listing_id, user["uid"])
+        user_is_admin = is_admin_user(user.get("email"))
+        deleted = delete_listing(listing_id, user["uid"], is_admin=user_is_admin)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     if not deleted:
@@ -299,8 +310,24 @@ import uuid
 import datetime
 
 @app.get("/api/marketplace/matches")
-def get_part_matches(device_type: str, brand: str, model_name: str, needed_part_category: str):
+def get_part_matches(
+    device_type: str,
+    brand: str,
+    model_name: str,
+    needed_part_category: str,
+    user: dict | None = Depends(get_optional_user),
+):
     """Find complementary broken devices or parts that can supply a needed component."""
+    # Monitor component matching query velocity for anomaly detection
+    user_id = user["uid"] if user else "anon_matcher"
+    fraud_service.evaluate_matching_activity(
+        user_id=user_id,
+        device_type=device_type,
+        brand=brand,
+        model_name=model_name,
+        needed_part_category=needed_part_category,
+    )
+
     # Use matching_ranking_agent for evidence-based candidate scoring
     all_listings = list_listings(status="active", limit=1000)
     raw_listings_dicts = [l.model_dump() if hasattr(l, "model_dump") else dict(l) for l in all_listings]
@@ -385,8 +412,20 @@ def evaluate_compatibility(req: CompatibilityEvaluationRequest):
 
 
 @app.post("/api/marketplace/compatible-components", response_model=list[MatchCandidate])
-def search_compatible_components(req: ComponentSearchRequest):
+def search_compatible_components(
+    req: ComponentSearchRequest,
+    user: dict | None = Depends(get_optional_user),
+):
     """Rank all active candidate components using AI matching agent + hard compatibility engine."""
+    user_id = user["uid"] if user else "anon_matcher"
+    fraud_service.evaluate_matching_activity(
+        user_id=user_id,
+        device_type=req.device_type,
+        brand=req.brand,
+        model_name=req.model_name,
+        needed_part_category=req.needed_part_category,
+    )
+
     all_listings = list_listings(status="active", limit=1000)
     raw_dicts = [l.model_dump() if hasattr(l, "model_dump") else dict(l) for l in all_listings]
     
@@ -530,5 +569,190 @@ def create_message(conversation_id: str, req: MessageCreateRequest, user: dict =
         raise HTTPException(status_code=403, detail="Not a participant in this conversation")
         
     return chat_service.send_message(conversation_id, user["uid"], req.text)
+
+
+# --- Authentication Security & Rate Limiting ------------------------------
+
+@app.post("/api/security/login-attempt", response_model=LoginAttemptResponse)
+def check_login_attempt(req: LoginAttemptRequest):
+    """
+    Checks whether a login attempt is permitted or currently in rate-limit cooldown.
+    Does not leak whether the account exists.
+    """
+    res = security_service.record_login_attempt(email=req.email)
+    return LoginAttemptResponse(**res)
+
+
+@app.post("/api/security/login-result")
+def record_login_result(req: LoginResultRequest, user: dict | None = Depends(get_optional_user)):
+    """
+    Records the outcome of a login attempt (success or failure) and evaluates brute-force patterns.
+    """
+    uid = user["uid"] if user else None
+    security_service.record_login_result(
+        email=req.email,
+        success=req.success,
+        user_id=uid,
+        error_code=req.error_code,
+    )
+    return {"status": "ok"}
+
+
+@app.get("/api/security/me")
+def get_security_profile(user: dict | None = Depends(get_optional_user)):
+    """
+    Returns user security profile, admin status, and restriction flag.
+    """
+    if not user:
+        return {"authenticated": False, "is_admin": False, "is_restricted": False}
+
+    is_admin = is_admin_user(user)
+    is_restr = sqlite_store.is_user_restricted(user["uid"])
+    return {
+        "authenticated": True,
+        "uid": user["uid"],
+        "email": user.get("email"),
+        "is_admin": is_admin,
+        "is_restricted": is_restr,
+    }
+
+
+# --- Fraud Detection & Admin Monitoring Endpoints -------------------------
+
+@app.get("/api/fraud/health")
+def fraud_health():
+    """Returns model health, version, and training status."""
+    return fraud_service.get_health_status()
+
+
+@app.get("/api/fraud/admin/summary", response_model=FraudSummaryMetrics)
+def fraud_admin_summary(admin: dict = Depends(require_admin)):
+    """Returns aggregated summary metrics for the admin fraud dashboard."""
+    return fraud_service.get_admin_summary()
+
+
+@app.get("/api/fraud/admin/assessments")
+def list_fraud_assessments(
+    risk_level: Optional[str] = None,
+    event_type: Optional[str] = None,
+    review_status: Optional[str] = None,
+    search: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+    admin: dict = Depends(require_admin),
+):
+    """Lists paginated fraud assessments with optional filters."""
+    items, total = fraud_service.list_assessments(
+        risk_level=risk_level,
+        event_type=event_type,
+        review_status=review_status,
+        search=search,
+        limit=limit,
+        offset=offset,
+    )
+    return {"assessments": items, "total": total, "limit": limit, "offset": offset}
+
+
+@app.get("/api/fraud/admin/assessments/{assessment_id}", response_model=FraudAssessment)
+def get_fraud_assessment_detail(assessment_id: str, admin: dict = Depends(require_admin)):
+    """Fetch complete details of a specific fraud assessment."""
+    assessment = fraud_service.get_assessment(assessment_id)
+    if not assessment:
+        raise HTTPException(status_code=404, detail="Assessment not found")
+    return FraudAssessment(**assessment)
+
+
+@app.patch("/api/fraud/admin/assessments/{assessment_id}/review", response_model=FraudAssessment)
+def review_fraud_assessment(
+    assessment_id: str,
+    req: FraudReviewActionRequest,
+    admin: dict = Depends(require_admin),
+):
+    """
+    Authorized administrator reviews an assessment (reviewed, false_positive, confirmed_fraud, resolved).
+    Audits the decision without overwriting the Isolation Forest score.
+    """
+    updated = fraud_service.review_assessment(
+        assessment_id=assessment_id,
+        review_status=req.review_status,
+        reviewer_id=admin["uid"],
+        review_notes=req.review_notes,
+    )
+    if not updated:
+        raise HTTPException(status_code=404, detail="Assessment not found")
+    return FraudAssessment(**updated)
+
+
+@app.patch("/api/fraud/admin/users/{user_id}/restriction")
+def update_user_restriction(
+    user_id: str,
+    req: UserRestrictionRequest,
+    admin: dict = Depends(require_admin),
+):
+    """Temporarily restrict or restore an account after fraud investigation."""
+    record = sqlite_store.set_user_restriction(
+        user_id=user_id,
+        is_restricted=req.is_restricted,
+        reason=req.reason,
+    )
+    # Log admin action audit trail
+    import uuid as _uuid
+    import datetime as _dt
+    sqlite_store.save_admin_action({
+        "id": f"act_{_uuid.uuid4().hex[:12]}",
+        "admin_uid": admin["uid"],
+        "action_type": "restrict_user" if req.is_restricted else "unrestrict_user",
+        "target_id": user_id,
+        "created_at": _dt.datetime.now(_dt.timezone.utc).isoformat(),
+        "reason": req.reason,
+    })
+    return {"status": "ok", "user_id": user_id, "is_restricted": req.is_restricted}
+
+
+@app.delete("/api/fraud/admin/listings/{listing_id}")
+def admin_delete_fraud_listing(listing_id: str, admin: dict = Depends(require_admin)):
+    """Allows an authorized administrator to purge or delete a confirmed fraudulent listing with an audit record."""
+    deleted = delete_listing(listing_id, requester_uid=admin["uid"], is_admin=True)
+    if not deleted:
+        raise HTTPException(status_code=404, detail=f"Listing '{listing_id}' not found or already removed from marketplace.")
+    import uuid as _uuid
+    import datetime as _dt
+    sqlite_store.save_admin_action({
+        "id": f"act_{_uuid.uuid4().hex[:12]}",
+        "admin_uid": admin["uid"],
+        "action_type": "delete_fraud_listing",
+        "target_id": listing_id,
+        "created_at": _dt.datetime.now(_dt.timezone.utc).isoformat(),
+        "reason": "Confirmed fraudulent listing deletion by administrator",
+    })
+    return {"deleted": True, "listing_id": listing_id}
+
+
+@app.delete("/api/fraud/admin/assessments/{assessment_id}")
+def admin_delete_fraud_assessment(assessment_id: str, admin: dict = Depends(require_admin)):
+    """Allows an administrator to delete or dismiss an assessment record."""
+    deleted = sqlite_store.delete_fraud_assessment(assessment_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Assessment record not found.")
+    import uuid as _uuid
+    import datetime as _dt
+    sqlite_store.save_admin_action({
+        "id": f"act_{_uuid.uuid4().hex[:12]}",
+        "admin_uid": admin["uid"],
+        "action_type": "delete_assessment",
+        "target_id": assessment_id,
+        "created_at": _dt.datetime.now(_dt.timezone.utc).isoformat(),
+        "reason": "Dismissed/deleted by administrator",
+    })
+    return {"deleted": True, "assessment_id": assessment_id}
+
+
+@app.post("/api/fraud/admin/prune-events")
+def admin_prune_fraud_events(admin: dict = Depends(require_admin)):
+    """Cleans up duplicate test events and prunes assessments down to 5-6 clean, realistic events."""
+    count = sqlite_store.prune_fraud_assessments(target_count=6)
+    return {"status": "ok", "remaining_count": count}
+
+
 
 

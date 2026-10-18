@@ -208,6 +208,8 @@ class MarketplaceListing(BaseModel):
 
     parts: list[PartListing] = Field(default_factory=list)
     recommendation_source: Optional[Recommendation] = None
+    fraud_assessment_id: Optional[str] = None
+    risk_level: Optional[str] = None
 
 
 class ListingStatusUpdateRequest(BaseModel):
@@ -334,5 +336,82 @@ class Conversation(BaseModel):
 class ConversationCreateRequest(BaseModel):
     listing_id: str
     seller_uid: str
+
+
+# --- Fraud & Anomaly Detection (Isolation Forest) -------------------------
+
+RiskLevel = Literal["low", "medium", "high", "critical"]
+ReviewStatus = Literal["pending", "reviewed", "false_positive", "confirmed_fraud", "resolved"]
+SecurityEventType = Literal[
+    "login_success", "login_failure", "rate_limit_triggered", "logout", "password_reset"
+]
+FraudAssessmentEventType = Literal[
+    "login_attempt", "listing_created", "listing_updated", "match_request", "reservation_created"
+]
+
+class SecurityEvent(BaseModel):
+    id: str
+    user_id: Optional[str] = None
+    email: Optional[str] = None
+    event_type: SecurityEventType
+    ip_address: Optional[str] = None
+    timestamp: str
+    metadata: dict = Field(default_factory=dict)
+
+class LoginAttemptRequest(BaseModel):
+    email: str
+
+class LoginResultRequest(BaseModel):
+    email: str
+    success: bool
+    error_code: Optional[str] = None
+
+class LoginAttemptResponse(BaseModel):
+    allowed: bool
+    remaining_attempts: int
+    cooldown_seconds: int = 0
+    message: Optional[str] = None
+
+class FraudAssessment(BaseModel):
+    event_id: str
+    user_id: str
+    user_email: Optional[str] = None
+    event_type: str
+    entity_id: Optional[str] = None
+    listing_title: Optional[str] = None
+    device_name: Optional[str] = None
+    device_type: Optional[str] = None
+    brand: Optional[str] = None
+    model_name: Optional[str] = None
+    anomaly_score: float
+    risk_level: RiskLevel
+    risk_indicators: list[str] = Field(default_factory=list)
+    observed_features: dict = Field(default_factory=dict)
+    model_version: str
+    created_at: str
+    review_status: ReviewStatus = "pending"
+    reviewer_id: Optional[str] = None
+    review_notes: Optional[str] = None
+    reviewed_at: Optional[str] = None
+
+class FraudReviewActionRequest(BaseModel):
+    review_status: ReviewStatus
+    review_notes: Optional[str] = None
+
+class UserRestrictionRequest(BaseModel):
+    is_restricted: bool
+    reason: Optional[str] = None
+
+class FraudSummaryMetrics(BaseModel):
+    total_assessments: int
+    low_risk_count: int
+    medium_risk_count: int
+    high_risk_count: int
+    critical_risk_count: int
+    pending_review_count: int
+    flagged_listings_count: int
+    security_events_24h: int
+    model_version: str
+    model_health: str
 
 
