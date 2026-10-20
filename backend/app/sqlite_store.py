@@ -145,6 +145,16 @@ def _ensure_table(conn: sqlite3.Connection) -> None:
         )
         """
     )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS analyses (
+            id          TEXT PRIMARY KEY,
+            user_uid    TEXT NOT NULL,
+            created_at  TEXT NOT NULL,
+            data        TEXT NOT NULL
+        )
+        """
+    )
     conn.commit()
 
 
@@ -795,5 +805,33 @@ def get_user_restriction(user_id: str) -> dict | None:
         "SELECT data FROM user_restrictions WHERE user_id = ?", (user_id,)
     ).fetchone()
     return json.loads(row["data"]) if row else None
+
+
+# --- Diagnosis History ----------------------------------------------------
+
+def save_analysis(user_uid: str, record: dict) -> None:
+    conn = _get_conn()
+    conn.execute(
+        """
+        INSERT OR REPLACE INTO analyses (id, user_uid, created_at, data)
+        VALUES (?, ?, ?, ?)
+        """,
+        (
+            record["id"],
+            user_uid,
+            record["created_at"],
+            json.dumps(record),
+        ),
+    )
+    conn.commit()
+
+
+def get_analyses_by_user(user_uid: str, limit: int = 50) -> list[dict]:
+    conn = _get_conn()
+    rows = conn.execute(
+        "SELECT data FROM analyses WHERE user_uid = ? ORDER BY created_at DESC LIMIT ?",
+        (user_uid, limit),
+    ).fetchall()
+    return [json.loads(r["data"]) for r in rows]
 
 

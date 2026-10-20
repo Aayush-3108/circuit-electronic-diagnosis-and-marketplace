@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { analyzeDevice } from '../api';
+import { useAuth } from '../context/AuthContext';
 import { CheckIcon } from './Icons';
 
 const DEVICE_TYPES = ['phone', 'laptop', 'tablet', 'pc', 'monitor'];
@@ -109,6 +110,7 @@ function Field({ label, children, id, note }) {
 }
 
 export default function AnalyzeForm({ onResult }) {
+  const { user } = useAuth();
   const [step, setStep] = useState(0);
 
   // Form State
@@ -160,6 +162,7 @@ export default function AnalyzeForm({ onResult }) {
     setError(null);
     setLoading(true);
     try {
+      const token = user && user.getIdToken ? await user.getIdToken() : null;
       const result = await analyzeDevice({
         image: primaryImage,
         deviceType,
@@ -168,7 +171,28 @@ export default function AnalyzeForm({ onResult }) {
         ageMonths: Number(ageMonths),
         batteryHealthPct: Number(batteryHealth),
         functionalStatus,
-      });
+      }, token);
+
+      if (user) {
+        try {
+          const localKey = `recircuit_history_${user.uid}`;
+          const currentLocal = JSON.parse(localStorage.getItem(localKey) || '[]');
+          const newEntry = {
+            id: result.id || `diag_${Date.now()}`,
+            created_at: new Date().toISOString(),
+            device_type: deviceType,
+            recommendation: result.recommendation,
+            estimated_repair_cost_inr: result.estimated_repair_cost_inr,
+            estimated_resale_value_inr: result.estimated_resale_value_inr,
+            damage_type: result.detection?.damage_type || 'none',
+          };
+          const updated = [newEntry, ...currentLocal.filter((item) => item.id !== newEntry.id)].slice(0, 50);
+          localStorage.setItem(localKey, JSON.stringify(updated));
+        } catch (localErr) {
+          console.warn('Failed to save to local diagnostic history cache:', localErr);
+        }
+      }
+
       onResult(result, { deviceType, brand, modelName, ramGb, storageGb, originalPrice, ageMonths }, primaryImage);
     } catch (err) {
       setError(err.message || 'Diagnostic scan failed. Please check that the backend is running.');

@@ -40,6 +40,7 @@ class AnalyzeResponse(BaseModel):
     estimated_repair_cost_inr: float
     estimated_resale_value_inr: float
     explanation: str
+    id: Optional[str] = None
 
 
 class UpgradeAdviceRequest(BaseModel):
@@ -78,6 +79,14 @@ class ChatResponse(BaseModel):
 class HistoryEntry(BaseModel):
     id: str
     created_at: str
+    device_type: DeviceType
+    recommendation: Recommendation
+    estimated_repair_cost_inr: float
+    estimated_resale_value_inr: float
+    damage_type: DamageType
+
+
+class HistoryCreateRequest(BaseModel):
     device_type: DeviceType
     recommendation: Recommendation
     estimated_repair_cost_inr: float

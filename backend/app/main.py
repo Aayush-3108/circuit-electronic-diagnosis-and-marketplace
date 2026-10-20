@@ -25,6 +25,7 @@ from app.schemas import (
     DeviceType,
     FunctionalStatus,
     HistoryEntry,
+    HistoryCreateRequest,
     ListingCreateRequest,
     ListingStatusUpdateRequest,
     MarketplaceListing,
@@ -159,6 +160,19 @@ async def analyze_device(
         f"'{prediction['recommendation']}'."
     )
 
+    saved_entry = None
+    if user is not None:
+        saved_entry = save_analysis(
+            user["uid"],
+            {
+                "device_type": str(getattr(device_type, "value", device_type)),
+                "recommendation": str(getattr(prediction["recommendation"], "value", prediction["recommendation"])),
+                "estimated_repair_cost_inr": float(prediction["estimated_repair_cost_inr"]),
+                "estimated_resale_value_inr": float(prediction["estimated_resale_value_inr"]),
+                "damage_type": str(getattr(detection.damage_type, "value", detection.damage_type)),
+            },
+        )
+
     response = AnalyzeResponse(
         detection=detection,
         recommendation=prediction["recommendation"],
@@ -166,19 +180,8 @@ async def analyze_device(
         estimated_repair_cost_inr=prediction["estimated_repair_cost_inr"],
         estimated_resale_value_inr=prediction["estimated_resale_value_inr"],
         explanation=explanation,
+        id=saved_entry.get("id") if saved_entry else None,
     )
-
-    if user is not None:
-        save_analysis(
-            user["uid"],
-            {
-                "device_type": device_type,
-                "recommendation": prediction["recommendation"],
-                "estimated_repair_cost_inr": prediction["estimated_repair_cost_inr"],
-                "estimated_resale_value_inr": prediction["estimated_resale_value_inr"],
-                "damage_type": detection.damage_type,
-            },
-        )
 
     return response
 
@@ -221,6 +224,22 @@ def chat(req: ChatRequest):
 def history(user: dict = Depends(require_user)):
     """Signed-in users only -- returns their past device analyses."""
     return get_history(user["uid"])
+
+
+@app.post("/api/history", response_model=HistoryEntry)
+def add_to_history(req: HistoryCreateRequest, user: dict = Depends(require_user)):
+    """Signed-in users can manually save or sync an analysis to their history."""
+    record = save_analysis(
+        user["uid"],
+        {
+            "device_type": str(getattr(req.device_type, "value", req.device_type)),
+            "recommendation": str(getattr(req.recommendation, "value", req.recommendation)),
+            "estimated_repair_cost_inr": float(req.estimated_repair_cost_inr),
+            "estimated_resale_value_inr": float(req.estimated_resale_value_inr),
+            "damage_type": str(getattr(req.damage_type, "value", req.damage_type)),
+        },
+    )
+    return HistoryEntry(**record)
 
 
 # --- Marketplace -----------------------------------------------------------

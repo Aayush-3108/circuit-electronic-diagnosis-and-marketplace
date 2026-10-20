@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getHistory, browseListings, updateListingStatus, deleteListing, getDemandForecast } from '../api';
+import { getHistory, browseListings, updateListingStatus, deleteListing } from '../api';
 import StatusChip from './StatusChip';
-import { PhoneIcon, LaptopIcon, MonitorIcon, BoxIcon, ArrowRightIcon } from './Icons';
+import { PhoneIcon, LaptopIcon, MonitorIcon } from './Icons';
 
 const TABS = [
   { id: 'history',  label: 'Diagnostic History' },
   { id: 'listings', label: 'My Listings' },
-  { id: 'stats',    label: 'Market & Impact Insights' },
 ];
 
 function DeviceIcon({ type, className = "w-5 h-5 text-[var(--accent)]" }) {
@@ -39,12 +38,39 @@ function HistoryTab({ onNavigate }) {
       setLoading(false);
       return;
     }
-    user.getIdToken().then((token) =>
-      getHistory(token)
-        .then(setEntries)
-        .catch((e) => setError(e.message))
-        .finally(() => setLoading(false))
-    );
+    const localKey = `recircuit_history_${user.uid}`;
+    let localCached = [];
+    try {
+      localCached = JSON.parse(localStorage.getItem(localKey) || '[]');
+    } catch {
+      localCached = [];
+    }
+
+    user.getIdToken()
+      .then((token) => getHistory(token))
+      .then((backendEntries) => {
+        const combined = [...(backendEntries || [])];
+        const ids = new Set(combined.map((e) => e.id));
+        for (const item of localCached) {
+          if (item && item.id && !ids.has(item.id)) {
+            combined.push(item);
+            ids.add(item.id);
+          }
+        }
+        combined.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        setEntries(combined);
+        try {
+          localStorage.setItem(localKey, JSON.stringify(combined));
+        } catch {}
+      })
+      .catch((e) => {
+        if (localCached && localCached.length > 0) {
+          setEntries(localCached);
+        } else {
+          setError(e.message || 'Failed to fetch diagnostic history');
+        }
+      })
+      .finally(() => setLoading(false));
   }, [user]);
 
   if (!user) {
@@ -70,31 +96,35 @@ function HistoryTab({ onNavigate }) {
         </div>
       ) : (
         <div className="space-y-3">
-          {(entries || []).map((e) => (
-            <div key={e.id} className="card p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-4 bg-[var(--surface-2)] border-[var(--border-subtle)] rounded-xl hover:border-[var(--accent)] transition-all">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-[var(--surface)] flex items-center justify-center border border-[var(--border-subtle)]">
-                  <DeviceIcon type={e.device_type} />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <StatusChip status={e.recommendation} size="sm" />
-                    <span className="text-xs font-medium text-[var(--text-muted)] capitalize">{e.damage_type.replaceAll('_', ' ')}</span>
+          {(entries || []).map((e) => {
+            const damageLabel = (e.damage_type || 'undetermined').replaceAll('_', ' ');
+            const refId = (e.id || '').length >= 6 ? e.id.slice(-6).toUpperCase() : (e.id || 'SCAN');
+            return (
+              <div key={e.id} className="card p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-4 bg-[var(--surface-2)] border-[var(--border-subtle)] rounded-xl hover:border-[var(--accent)] transition-all">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-[var(--surface)] flex items-center justify-center border border-[var(--border-subtle)]">
+                    <DeviceIcon type={e.device_type} />
                   </div>
-                  <p className="text-xs text-[var(--text-dim)] mt-0.5 capitalize">
-                    {e.device_type} · Ref #{e.id.slice(-6).toUpperCase()}
-                  </p>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <StatusChip status={e.recommendation} size="sm" />
+                      <span className="text-xs font-medium text-[var(--text-muted)] capitalize">{damageLabel}</span>
+                    </div>
+                    <p className="text-xs text-[var(--text-dim)] mt-0.5 capitalize">
+                      {e.device_type} · Ref #{refId}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-6 justify-between sm:justify-end">
+                  <div className="text-left sm:text-right text-xs">
+                    <p className="text-[var(--repair)] font-semibold">Repair: {fmtINR(e.estimated_repair_cost_inr)}</p>
+                    <p className="text-[var(--sell)] font-semibold">Resale: {fmtINR(e.estimated_resale_value_inr)}</p>
+                  </div>
+                  <span className="text-xs text-[var(--text-dim)] shrink-0">{fmtDate(e.created_at)}</span>
                 </div>
               </div>
-              <div className="flex items-center gap-6 justify-between sm:justify-end">
-                <div className="text-left sm:text-right text-xs">
-                  <p className="text-[var(--repair)] font-semibold">Repair: {fmtINR(e.estimated_repair_cost_inr)}</p>
-                  <p className="text-[var(--sell)] font-semibold">Resale: {fmtINR(e.estimated_resale_value_inr)}</p>
-                </div>
-                <span className="text-xs text-[var(--text-dim)] shrink-0">{fmtDate(e.created_at)}</span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -213,87 +243,6 @@ function ListingsTab({ onNavigate }) {
   );
 }
 
-/* ── Activity statistics ─────────────────────────────────────────────────── */
-function StatsTab() {
-  const [forecast, setForecast] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    getDemandForecast()
-      .then((data) => setForecast(data.forecasts))
-      .catch((e) => console.error("Failed to load forecast:", e))
-      .finally(() => setLoading(false));
-  }, []);
-
-  return (
-    <div className="space-y-6 pt-2">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { metric: 'Scans Performed', val: '3', desc: 'Condition assessments run' },
-          { metric: 'Active Listings', val: '2 Units', desc: 'Parts listed on marketplace' },
-          { metric: 'Recovered Value', val: '₹12,400', desc: 'Estimated hardware residual value' },
-          { metric: 'E-Waste Offset', val: '14.2 kg', desc: 'Calculated electronic waste diverted' },
-        ].map((item, idx) => (
-          <div key={idx} className="card bg-[var(--surface-2)] border-[var(--border-subtle)] p-4 flex flex-col justify-between rounded-xl">
-            <span className="text-xs font-semibold text-[var(--text-dim)]">{item.metric}</span>
-            <p className="text-xl font-bold text-[var(--accent)] mt-2">{item.val}</p>
-            <p className="text-[11px] text-[var(--text-muted)] mt-1 leading-tight">{item.desc}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="card p-6 border-[var(--border)] rounded-xl space-y-4">
-        <h4 className="text-sm font-bold text-[var(--text)]">Assessment Recommendations Distribution</h4>
-        <div className="space-y-3">
-          {[
-            { tag: 'Sell for Value', count: 1, total: 3, color: 'var(--sell)' },
-            { tag: 'Repair Device',  count: 1, total: 3, color: 'var(--repair)' },
-            { tag: 'Eco Recycle',    count: 1, total: 3, color: 'var(--recycle)' },
-            { tag: 'Upgrade Ready',  count: 0, total: 3, color: 'var(--upgrade)' },
-          ].map((bar) => {
-            const pct = (bar.count / bar.total) * 100;
-            return (
-              <div key={bar.tag} className="space-y-1.5">
-                <div className="flex justify-between text-xs font-medium">
-                  <span className="font-semibold" style={{ color: bar.color }}>{bar.tag}</span>
-                  <span className="text-[var(--text-dim)]">{bar.count} of {bar.total}</span>
-                </div>
-                <div className="h-2 rounded-full bg-[var(--surface-2)] overflow-hidden">
-                  <div className="h-full rounded-full transition-all duration-300" style={{ width: `${pct}%`, background: bar.color }} />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="card p-6 border-[var(--border)] rounded-xl space-y-4">
-        <h4 className="text-sm font-bold text-[var(--text)]">Component Sourcing & Demand Trends</h4>
-        {loading ? (
-          <div className="skeleton h-16 rounded-xl" />
-        ) : forecast ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {Object.entries(forecast).map(([part, data]) => (
-              <div key={part} className="border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4 rounded-xl flex justify-between items-center">
-                <div>
-                  <p className="text-xs font-semibold text-[var(--text-dim)] uppercase">{part.replace('_', ' ')}</p>
-                  <p className="font-bold text-sm text-[var(--text)] mt-0.5 capitalize">{data.trend} Demand</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase">Index Score</p>
-                  <p className="text-lg text-[var(--accent)] font-bold">{data.predicted_demand_score}/100</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-xs text-[var(--text-dim)]">Trend information updating...</p>
-        )}
-      </div>
-    </div>
-  );
-}
-
 /* ── Dashboard root ──────────────────────────────────────────────────────── */
 export default function Dashboard({ onNavigate }) {
   const [tab, setTab] = useState('history');
@@ -304,7 +253,7 @@ export default function Dashboard({ onNavigate }) {
         <span className="section-label">Account Activity</span>
         <h1 className="text-3xl font-bold mt-1 text-[var(--text)]">Your Hardware Dashboard</h1>
         <p className="text-sm text-[var(--text-muted)] mt-1">
-          Review your previous evaluations, manage active marketplace listings, and check hardware demand.
+          Review your previous diagnostic evaluations and manage your marketplace listings.
         </p>
       </div>
 
@@ -328,8 +277,8 @@ export default function Dashboard({ onNavigate }) {
       <div>
         {tab === 'history'  && <HistoryTab onNavigate={onNavigate} />}
         {tab === 'listings' && <ListingsTab onNavigate={onNavigate} />}
-        {tab === 'stats'    && <StatsTab />}
       </div>
     </section>
   );
 }
+
