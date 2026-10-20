@@ -9,15 +9,19 @@ async function handleResponse(res) {
   return res.json();
 }
 
-export async function analyzeDevice({
-  image,
-  deviceType,
-  brandTier,
-  originalPriceInr,
-  ageMonths,
-  batteryHealthPct,
-  functionalStatus,
-}) {
+export async function analyzeDevice(params, tokenArg = null) {
+  const {
+    image,
+    deviceType,
+    brandTier,
+    originalPriceInr,
+    ageMonths,
+    batteryHealthPct,
+    functionalStatus,
+    idToken: tokenInParams,
+  } = params;
+  const token = tokenArg || tokenInParams;
+
   const form = new FormData();
   form.append('image', image);
   form.append('device_type', deviceType);
@@ -27,8 +31,14 @@ export async function analyzeDevice({
   form.append('battery_health_pct', batteryHealthPct);
   form.append('functional_status', functionalStatus);
 
+  const headers = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const res = await fetch(`${API_URL}/api/analyze-device`, {
     method: 'POST',
+    headers,
     body: form,
   });
   return handleResponse(res);
@@ -73,6 +83,18 @@ export async function sendChatMessage({ messages }) {
 export async function getHistory(idToken) {
   const res = await fetch(`${API_URL}/api/history`, {
     headers: { Authorization: `Bearer ${idToken}` },
+  });
+  return handleResponse(res);
+}
+
+export async function saveHistoryEntry(entry, idToken) {
+  const res = await fetch(`${API_URL}/api/history`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${idToken}`,
+    },
+    body: JSON.stringify(entry),
   });
   return handleResponse(res);
 }
